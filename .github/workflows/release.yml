@@ -70,11 +70,11 @@ jobs:
           workspaces: app/src-tauri
 
       - name: Install Tauri CLI
-        run: npm install @tauri-apps/cli
+        run: npm install
         working-directory: app/src-tauri
 
       - name: Build Tauri App
-        run: npx tauri build ${{ matrix.args }}
+        run: npm run tauri build -- ${{ matrix.args }}
         working-directory: app/src-tauri
 
       - name: Upload artifacts (Windows)
