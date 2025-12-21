@@ -5,116 +5,158 @@
 <h1 align="center">⚡ VietFlux IME</h1>
 
 <p align="center">
-  <strong>Bộ gõ tiếng Việt hiệu năng cao với WebAssembly</strong>
+  <strong>Bộ gõ tiếng Việt thông minh - Dành cho Developers & Everyone</strong>
 </p>
 
 <p align="center">
-  <a href="#features"><img src="https://img.shields.io/badge/Rust-000000?style=flat-square&logo=rust&logoColor=white" alt="Rust"/></a>
-  <a href="#features"><img src="https://img.shields.io/badge/WebAssembly-654FF0?style=flat-square&logo=webassembly&logoColor=white" alt="WebAssembly"/></a>
+  <a href="#-cài-đặt"><img src="https://img.shields.io/badge/Windows-0078D6?style=flat-square&logo=windows&logoColor=white" alt="Windows"/></a>
+  <a href="#-cài-đặt"><img src="https://img.shields.io/badge/macOS-000000?style=flat-square&logo=apple&logoColor=white" alt="macOS"/></a>
+  <a href="#-cài-đặt"><img src="https://img.shields.io/badge/Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=flat-square" alt="License: MIT"/></a>
-  <a href="https://github.com/ThanhNguyxn/vietflux-ime/stargazers"><img src="https://img.shields.io/github/stars/ThanhNguyxn/vietflux-ime?style=flat-square&color=yellow" alt="Stars"/></a>
 </p>
 
 <p align="center">
-  <a href="#-tính-năng">Tính năng</a> •
+  <a href="#-tại-sao-chọn-vietflux">Tại sao?</a> •
   <a href="#-cài-đặt">Cài đặt</a> •
-  <a href="#-sử-dụng">Sử dụng</a> •
+  <a href="#-tính-năng">Tính năng</a> •
   <a href="#-phím-tắt">Phím tắt</a> •
-  <a href="#-đóng-góp">Đóng góp</a>
+  <a href="#-support">Ủng hộ</a>
 </p>
+
+---
+
+## 🎯 Tại sao chọn VietFlux?
+
+| Vấn đề với bộ gõ cũ | VietFlux giải quyết |
+|---------------------|---------------------|
+| ❌ Gõ code bị biến thành tiếng Việt (`neư` thay vì `new`) | ✅ **Tự nhận diện English** - Code thoải mái! |
+| ❌ Chậm, lag khi gõ nhanh | ✅ **Siêu nhanh** - Viết bằng Rust, < 1ms/phím |
+| ❌ Không chạy trên Web/Cross-platform | ✅ **Chạy mọi nơi** - Windows, macOS, Linux, Web |
+| ❌ Gõ `được` ra `đưọc` | ✅ **Smart ươ** - Tự động đặt dấu đúng chỗ |
+| ❌ Phải tắt/bật IME liên tục | ✅ **Thông minh** - Tự biết khi nào dùng |
+
+---
+
+## 📦 Cài đặt
+
+### 🪟 Windows
+
+**Cách 1: Cài 1-click (Khuyến nghị)**
+```
+1. Tải file: VietFlux-Setup.exe
+2. Double-click để cài
+3. Xong! Bắt đầu gõ tiếng Việt
+```
+
+**Cách 2: Portable (Không cần cài)**
+```
+1. Tải file: VietFlux-Portable.zip
+2. Giải nén ra thư mục bất kỳ
+3. Chạy VietFlux.exe
+```
+
+> 📥 **[Tải về cho Windows](https://github.com/ThanhNguyxn/vietflux-ime/releases/latest)**
+
+---
+
+### 🍎 macOS
+
+**Cách 1: Homebrew (Khuyến nghị)**
+```bash
+brew install --cask vietflux
+```
+
+**Cách 2: Cài thủ công**
+```
+1. Tải file: VietFlux.dmg
+2. Mở file .dmg
+3. Kéo VietFlux vào thư mục Applications
+4. Mở VietFlux từ Applications
+5. Cho phép trong System Settings → Privacy → Accessibility
+```
+
+> 📥 **[Tải về cho macOS](https://github.com/ThanhNguyxn/vietflux-ime/releases/latest)**
+
+---
+
+### 🐧 Linux
+
+**Ubuntu/Debian:**
+```bash
+# Thêm repo
+curl -fsSL https://vietflux.dev/gpg | sudo gpg --dearmor -o /usr/share/keyrings/vietflux.gpg
+echo "deb [signed-by=/usr/share/keyrings/vietflux.gpg] https://vietflux.dev/apt stable main" | sudo tee /etc/apt/sources.list.d/vietflux.list
+
+# Cài đặt
+sudo apt update && sudo apt install vietflux
+```
+
+**Fedora/RHEL:**
+```bash
+sudo dnf install vietflux
+```
+
+**Arch Linux:**
+```bash
+yay -S vietflux
+```
+
+**AppImage (Chạy trên mọi distro):**
+```bash
+# Tải và chạy
+wget https://github.com/ThanhNguyxn/vietflux-ime/releases/latest/download/VietFlux.AppImage
+chmod +x VietFlux.AppImage
+./VietFlux.AppImage
+```
+
+> 📥 **[Tải về cho Linux](https://github.com/ThanhNguyxn/vietflux-ime/releases/latest)**
+
+---
+
+### 🌐 Web Demo (Dùng thử ngay!)
+
+Không muốn cài? Thử trực tiếp trên trình duyệt:
+
+👉 **[Dùng thử VietFlux Online](https://vietflux.dev/demo)**
 
 ---
 
 ## ✨ Tính năng
 
+### 🚀 Core Features
+
 | Tính năng | Mô tả |
 |-----------|-------|
-| ⚡ **Hiệu năng cao** | Core engine viết bằng Rust, compile to WebAssembly |
-| 🎯 **Telex & VNI** | Hỗ trợ cả hai phương thức gõ phổ biến nhất |
-| 🌐 **Cross-platform** | Chạy trên Web, Desktop (Tauri), và Mobile |
-| 📦 **Siêu nhẹ** | Bundle size < 100KB gzipped |
-| 🔒 **Privacy-first** | Xử lý hoàn toàn local, không gửi dữ liệu lên server |
-| 🎨 **Modern UI** | Giao diện đẹp với Dark mode |
+| ⚡ **Siêu nhanh** | Core engine viết bằng Rust, < 1ms mỗi phím |
+| 🎯 **Telex & VNI** | Hỗ trợ cả hai phương thức gõ phổ biến |
+| 🌐 **Cross-platform** | Windows, macOS, Linux, và Web |
+| 📦 **Siêu nhẹ** | Chỉ ~3MB, không làm nặng máy |
 
----
+### 🧠 Smart Features (Dành cho Developers)
 
-## 📁 Cấu trúc dự án
+| Tính năng | Mô tả |
+|-----------|-------|
+| 🔍 **Tự nhận diện English** | `neư` → tự restore thành `new` |
+| 🎯 **Smart ươ Compound** | `dduwocj` → `được` (không phải `đưọc`) |
+| ⏪ **Double Mark Undo** | Gõ `as` + `s` → `á`, gõ `s` nữa → `as` |
+| 📝 **Shortcut Expansion** | `ko` → `không`, `dc` → `được` |
+| 🔄 **Auto-restore** | Gõ sai tự động sửa khi nhấn Space |
 
-```
-vietflux-ime/
-├── 📂 core/                    # 🦀 Rust core engine
-│   ├── src/
-│   │   ├── lib.rs              # WASM bindings
-│   │   ├── engine.rs           # Main IME engine
-│   │   ├── buffer.rs           # Input buffer management
-│   │   ├── chars.rs            # Vietnamese character data
-│   │   ├── transform.rs        # Character transformation
-│   │   ├── validation.rs       # Syllable validation
-│   │   └── methods/            # Input methods
-│   │       ├── telex.rs        # ⌨️ Telex
-│   │       └── vni.rs          # 🔢 VNI
-│   └── Cargo.toml
-├── 📂 web/                     # 🌐 Web demo
-│   └── index.html
-├── 📄 README.md
-└── 📄 LICENSE
-```
+### 🛡️ Validation Features
 
----
+| Tính năng | Mô tả |
+|-----------|-------|
+| ✅ **5 Phonology Rules** | Kiểm tra âm đầu, âm cuối, spelling rules |
+| 🚫 **Invalid Pattern Detection** | Phát hiện `eư`, `oư`, `iư` (không hợp lệ) |
+| 🔤 **Typing Sequence Aware** | `dodo` = đang gõ `đô`, không restore |
 
-## 🚀 Cài đặt
+### 🎨 UX Features
 
-### Yêu cầu
-- 🦀 [Rust](https://rustup.rs/) 1.70+
-- 📦 [wasm-pack](https://rustwasm.github.io/wasm-pack/)
-
-### Build từ source
-
-```bash
-# Clone repo
-git clone https://github.com/ThanhNguyxn/vietflux-ime.git
-cd vietflux-ime
-
-# Build WASM
-cd core
-wasm-pack build --target web
-
-# Chạy demo
-cd ../web
-python -m http.server 8080
-```
-
----
-
-## 💡 Sử dụng
-
-### JavaScript/TypeScript
-
-```javascript
-import init, { VietFlux } from 'vietflux-core';
-
-// Khởi tạo WASM
-await init();
-
-// Tạo instance IME
-const ime = new VietFlux();
-
-// Đặt phương thức gõ
-ime.set_method('telex'); // hoặc 'vni'
-
-// Xử lý phím
-const result = ime.process_key('a', false);
-console.log(result); // { action: "update", output: "a", backspace: 0 }
-
-// Gõ "việt" bằng Telex
-ime.process_key('v', false);
-ime.process_key('i', false);
-ime.process_key('e', false);
-ime.process_key('e', false); // ee → ê
-ime.process_key('j', false); // j → nặng
-ime.process_key('t', false);
-console.log(ime.get_buffer()); // "việt"
-```
+| Tính năng | Mô tả |
+|-----------|-------|
+| 🌙 **Dark Mode** | Giao diện tối hiện đại |
+| 🖥️ **System Tray** | Chạy nền, không chiếm taskbar |
+| ⌨️ **Hotkey Toggle** | Bật/tắt nhanh bằng phím tắt |
 
 ---
 
@@ -153,35 +195,41 @@ console.log(ime.get_buffer()); // "việt"
 | `9` | đ | `d9` → đ |
 | `0` | xóa dấu | `á0` → a |
 
+### Phím tắt hệ thống
+
+| Phím | Chức năng |
+|------|-----------|
+| `Ctrl + Shift` | Bật/tắt VietFlux |
+| `Ctrl + .` | Chuyển Telex ↔ VNI |
+
 ---
 
 ## 🏗️ Kiến trúc
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│                    Applications                         │
+│                    VietFlux IME                         │
 ├─────────┬─────────┬─────────┬─────────┬───────────────┤
-│   Web   │  Tauri  │ Node.js │ Electron│    Native     │
-│ Browser │ Desktop │  CLI    │   App   │  Windows/Mac  │
+│ Windows │  macOS  │  Linux  │   Web   │    Mobile     │
+│  Native │ Native  │ Native  │  WASM   │   (Coming)    │
 ├─────────┴─────────┴─────────┴─────────┴───────────────┤
 │                 WebAssembly (WASM)                      │
 ├────────────────────────────────────────────────────────┤
 │                  Rust Core Engine                       │
 │  ┌──────────┐ ┌──────────┐ ┌────────────────────────┐  │
-│  │  Engine  │ │  Buffer  │ │      Transform         │  │
-│  │          │ │          │ │   Telex │ VNI          │  │
+│  │ Validate │ │ Transform│ │   Smart Detection      │  │
+│  │ Phonology│ │ Telex/VNI│ │   English/Vietnamese   │  │
 │  └──────────┘ └──────────┘ └────────────────────────┘  │
 └────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🛠️ Công nghệ sử dụng
+## 🛠️ Công nghệ
 
 <p align="center">
   <img src="https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white" alt="Rust"/>
   <img src="https://img.shields.io/badge/WebAssembly-654FF0?style=for-the-badge&logo=webassembly&logoColor=white" alt="WebAssembly"/>
-  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"/>
   <img src="https://img.shields.io/badge/Tauri-FFC131?style=for-the-badge&logo=tauri&logoColor=black" alt="Tauri"/>
 </p>
 
