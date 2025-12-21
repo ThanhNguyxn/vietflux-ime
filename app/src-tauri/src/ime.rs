@@ -72,15 +72,19 @@ pub fn process_key(key: char, _shift: bool) -> ProcessResult {
     // In a real engine, this would be part of the composition loop
     // Here we just check if the buffer + key matches a shortcut trigger
     let current_input = format!("{}{}", ime.buffer, key);
-    for shortcut in &ime.shortcuts {
-        if shortcut.enabled && shortcut.trigger == current_input {
-            ime.buffer.clear();
-            return ProcessResult {
-                action: "commit".to_string(),
-                output: shortcut.expansion.clone(),
-                backspace: shortcut.trigger.len() - 1, // Backspace previous chars
-            };
-        }
+    
+    // Fix: Find match first to avoid borrowing conflict (E0502)
+    let match_found = ime.shortcuts.iter()
+        .find(|s| s.enabled && s.trigger == current_input)
+        .map(|s| (s.expansion.clone(), s.trigger.len()));
+
+    if let Some((expansion, trigger_len)) = match_found {
+        ime.buffer.clear();
+        return ProcessResult {
+            action: "commit".to_string(),
+            output: expansion,
+            backspace: trigger_len - 1, // Backspace previous chars
+        };
     }
     
     // Simple Telex processing (placeholder - will use core engine)
