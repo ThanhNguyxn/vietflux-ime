@@ -157,7 +157,7 @@ impl Engine {
     }
 
     /// Process a key press
-    pub fn process_key(&mut self, key: char, shift: bool) -> ProcessResult {
+    pub fn process_key(&mut self, key: char, _shift: bool) -> ProcessResult {
         if !self.enabled {
             return ProcessResult::passthrough();
         }
