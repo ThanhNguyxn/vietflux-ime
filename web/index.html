@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VietFlux IME - Demo</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --surface-light: #334155;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --border: #475569;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary) 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+        
+        .card {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+        
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: var(--surface-light);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+        
+        .btn.active {
+            background: var(--success);
+            color: white;
+        }
+        
+        .input-area {
+            position: relative;
+        }
+        
+        #input {
+            width: 100%;
+            min-height: 150px;
+            padding: 1.5rem;
+            font-size: 1.25rem;
+            line-height: 1.8;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            resize: vertical;
+            transition: border-color 0.2s ease;
+        }
+        
+        #input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        #input::placeholder {
+            color: var(--text-muted);
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .info-item {
+            background: var(--bg);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        
+        .info-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+        
+        .info-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .shortcuts {
+            margin-top: 2rem;
+        }
+        
+        .shortcuts h3 {
+            margin-bottom: 1rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        
+        .shortcut-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 0.5rem;
+        }
+        
+        .shortcut {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: var(--bg);
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .shortcut kbd {
+            padding: 0.25rem 0.5rem;
+            background: var(--surface-light);
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: 600;
+        }
+        
+        footer {
+            margin-top: 3rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ VietFlux IME</h1>
+            <p class="subtitle">Bộ gõ tiếng Việt hiệu năng cao với WebAssembly</p>
+        </header>
+        
+        <div class="card">
+            <div class="controls">
+                <button id="methodBtn" class="btn btn-primary">Telex</button>
+                <button id="toggleBtn" class="btn btn-secondary active">Bật</button>
+                <button id="clearBtn" class="btn btn-secondary">Xóa</button>
+            </div>
+            
+            <div class="input-area">
+                <textarea 
+                    id="input" 
+                    placeholder="Gõ tiếng Việt tại đây... (Ví dụ: Xin chaof, Vieejt Nam)"
+                    spellcheck="false"
+                    autofocus
+                ></textarea>
+            </div>
+            
+            <div class="status">
+                <span class="status-dot"></span>
+                <span id="statusText">Sẵn sàng - Telex</span>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Phương thức</div>
+                    <div class="info-value" id="methodDisplay">Telex</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Buffer</div>
+                    <div class="info-value" id="bufferDisplay">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Latency</div>
+                    <div class="info-value" id="latencyDisplay">0ms</div>
+                </div>
+            </div>
+            
+            <div class="shortcuts">
+                <h3>Phím tắt Telex</h3>
+                <div class="shortcut-grid">
+                    <div class="shortcut"><kbd>aa</kbd> → â</div>
+                    <div class="shortcut"><kbd>aw</kbd> → ă</div>
+                    <div class="shortcut"><kbd>ow</kbd> → ơ</div>
+                    <div class="shortcut"><kbd>uw</kbd> → ư</div>
+                    <div class="shortcut"><kbd>dd</kbd> → đ</div>
+                    <div class="shortcut"><kbd>s</kbd> → sắc</div>
+                    <div class="shortcut"><kbd>f</kbd> → huyền</div>
+                    <div class="shortcut"><kbd>r</kbd> → hỏi</div>
+                    <div class="shortcut"><kbd>x</kbd> → ngã</div>
+                    <div class="shortcut"><kbd>j</kbd> → nặng</div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>
+                Powered by Rust + WebAssembly | 
+                <a href="https://github.com/ThanhNguyxn/vietflux-ime" target="_blank">GitHub</a>
+            </p>
+        </footer>
+    </div>
+    
+    <script type="module">
+        // Simple JavaScript IME for demo (will be replaced by WASM)
+        class VietFluxDemo {
+            constructor() {
+                this.method = 'telex';
+                this.enabled = true;
+                this.buffer = '';
+                
+                // Vietnamese character maps
+                this.charMap = {
+                    'a': { '^': 'â', 'w': 'ă', '1': 'á', '2': 'à', '3': 'ả', '4': 'ã', '5': 'ạ' },
+                    'â': { '1': 'ấ', '2': 'ầ', '3': 'ẩ', '4': 'ẫ', '5': 'ậ' },
+                    'ă': { '1': 'ắ', '2': 'ằ', '3': 'ẳ', '4': 'ẵ', '5': 'ặ' },
+                    'e': { '^': 'ê', '1': 'é', '2': 'è', '3': 'ẻ', '4': 'ẽ', '5': 'ẹ' },
+                    'ê': { '1': 'ế', '2': 'ề', '3': 'ể', '4': 'ễ', '5': 'ệ' },
+                    'i': { '1': 'í', '2': 'ì', '3': 'ỉ', '4': 'ĩ', '5': 'ị' },
+                    'o': { '^': 'ô', 'w': 'ơ', '1': 'ó', '2': 'ò', '3': 'ỏ', '4': 'õ', '5': 'ọ' },
+                    'ô': { '1': 'ố', '2': 'ồ', '3': 'ổ', '4': 'ỗ', '5': 'ộ' },
+                    'ơ': { '1': 'ớ', '2': 'ờ', '3': 'ở', '4': 'ỡ', '5': 'ợ' },
+                    'u': { 'w': 'ư', '1': 'ú', '2': 'ù', '3': 'ủ', '4': 'ũ', '5': 'ụ' },
+                    'ư': { '1': 'ứ', '2': 'ừ', '3': 'ử', '4': 'ữ', '5': 'ự' },
+                    'y': { '1': 'ý', '2': 'ỳ', '3': 'ỷ', '4': 'ỹ', '5': 'ỵ' },
+                    'd': { 'd': 'đ' },
+                };
+                
+                // Telex tone keys
+                this.telexTones = { 's': '1', 'f': '2', 'r': '3', 'x': '4', 'j': '5' };
+            }
+            
+            processKey(key, text, cursorPos) {
+                if (!this.enabled) return { text, cursorPos };
+                
+                const start = performance.now();
+                let result = { text, cursorPos };
+                
+                if (this.method === 'telex') {
+                    result = this.processTelexKey(key, text, cursorPos);
+                } else {
+                    result = this.processVniKey(key, text, cursorPos);
+                }
+                
+                const latency = (performance.now() - start).toFixed(2);
+                document.getElementById('latencyDisplay').textContent = latency + 'ms';
+                
+                return result;
+            }
+            
+            processTelexKey(key, text, cursorPos) {
+                const lowerKey = key.toLowerCase();
+                const before = text.substring(0, cursorPos);
+                const after = text.substring(cursorPos);
+                
+                // Find last vowel in current word
+                const wordMatch = before.match(/[a-zA-ZăâêôơưđĂÂÊÔƠƯĐ]+$/);
+                if (!wordMatch) return { text: before + key + after, cursorPos: cursorPos + 1 };
+                
+                const word = wordMatch[0];
+                const wordStart = before.length - word.length;
+                
+                // Tone marks
+                if (this.telexTones[lowerKey]) {
+                    const toneNum = this.telexTones[lowerKey];
+                    const newWord = this.applyTone(word, toneNum);
+                    if (newWord !== word) {
+                        const newText = before.substring(0, wordStart) + newWord + after;
+                        return { text: newText, cursorPos: wordStart + newWord.length };
+                    }
+                }
+                
+                // Circumflex (aa, ee, oo)
+                if ('aeo'.includes(lowerKey)) {
+                    const lastChar = word.slice(-1).toLowerCase();
+                    if (lastChar === lowerKey && this.charMap[lowerKey]?.['^']) {
+                        const newChar = key === key.toUpperCase() 
+                            ? this.charMap[lowerKey]['^'].toUpperCase() 
+                            : this.charMap[lowerKey]['^'];
+                        const newWord = word.slice(0, -1) + newChar;
+                        const newText = before.substring(0, wordStart) + newWord + after;
+                        return { text: newText, cursorPos: wordStart + newWord.length };
+                    }
+                }
+                
+                // Horn/Breve (w)
+                if (lowerKey === 'w') {
+                    for (let i = word.length - 1; i >= 0; i--) {
+                        const char = word[i].toLowerCase();
+                        if (this.charMap[char]?.['w']) {
+                            const newChar = word[i] === word[i].toUpperCase()
+                                ? this.charMap[char]['w'].toUpperCase()
+                                : this.charMap[char]['w'];
+                            const newWord = word.substring(0, i) + newChar + word.substring(i + 1);
+                            const newText = before.substring(0, wordStart) + newWord + after;
+                            return { text: newText, cursorPos: wordStart + newWord.length };
+                        }
+                    }
+                }
+                
+                // Stroke (dd)
+                if (lowerKey === 'd' && word.slice(-1).toLowerCase() === 'd') {
+                    const newChar = word.slice(-1) === 'D' ? 'Đ' : 'đ';
+                    const newWord = word.slice(0, -1) + newChar;
+                    const newText = before.substring(0, wordStart) + newWord + after;
+                    return { text: newText, cursorPos: wordStart + newWord.length };
+                }
+                
+                return { text: before + key + after, cursorPos: cursorPos + 1 };
+            }
+            
+            processVniKey(key, text, cursorPos) {
+                const before = text.substring(0, cursorPos);
+                const after = text.substring(cursorPos);
+                
+                if (!'0123456789'.includes(key)) {
+                    return { text: before + key + after, cursorPos: cursorPos + 1 };
+                }
+                
+                const wordMatch = before.match(/[a-zA-ZăâêôơưđĂÂÊÔƠƯĐ]+$/);
+                if (!wordMatch) return { text: before + key + after, cursorPos: cursorPos + 1 };
+                
+                const word = wordMatch[0];
+                const wordStart = before.length - word.length;
+                
+                // Tones (1-5)
+                if ('12345'.includes(key)) {
+                    const newWord = this.applyTone(word, key);
+                    if (newWord !== word) {
+                        const newText = before.substring(0, wordStart) + newWord + after;
+                        return { text: newText, cursorPos: wordStart + newWord.length };
+                    }
+                }
+                
+                // Circumflex (6)
+                if (key === '6') {
+                    for (let i = word.length - 1; i >= 0; i--) {
+                        const char = word[i].toLowerCase();
+                        if ('aeo'.includes(char) && this.charMap[char]?.['^']) {
+                            const newChar = word[i] === word[i].toUpperCase()
+                                ? this.charMap[char]['^'].toUpperCase()
+                                : this.charMap[char]['^'];
+                            const newWord = word.substring(0, i) + newChar + word.substring(i + 1);
+                            const newText = before.substring(0, wordStart) + newWord + after;
+                            return { text: newText, cursorPos: wordStart + newWord.length };
+                        }
+                    }
+                }
+                
+                // Horn (7)
+                if (key === '7') {
+                    for (let i = word.length - 1; i >= 0; i--) {
+                        const char = word[i].toLowerCase();
+                        if ('ou'.includes(char) && this.charMap[char]?.['w']) {
+                            const newChar = word[i] === word[i].toUpperCase()
+                                ? this.charMap[char]['w'].toUpperCase()
+                                : this.charMap[char]['w'];
+                            const newWord = word.substring(0, i) + newChar + word.substring(i + 1);
+                            const newText = before.substring(0, wordStart) + newWord + after;
+                            return { text: newText, cursorPos: wordStart + newWord.length };
+                        }
+                    }
+                }
+                
+                // Breve (8)
+                if (key === '8') {
+                    for (let i = word.length - 1; i >= 0; i--) {
+                        if (word[i].toLowerCase() === 'a') {
+                            const newChar = word[i] === 'A' ? 'Ă' : 'ă';
+                            const newWord = word.substring(0, i) + newChar + word.substring(i + 1);
+                            const newText = before.substring(0, wordStart) + newWord + after;
+                            return { text: newText, cursorPos: wordStart + newWord.length };
+                        }
+                    }
+                }
+                
+                // Stroke (9)
+                if (key === '9') {
+                    for (let i = word.length - 1; i >= 0; i--) {
+                        if (word[i].toLowerCase() === 'd') {
+                            const newChar = word[i] === 'D' ? 'Đ' : 'đ';
+                            const newWord = word.substring(0, i) + newChar + word.substring(i + 1);
+                            const newText = before.substring(0, wordStart) + newWord + after;
+                            return { text: newText, cursorPos: wordStart + newWord.length };
+                        }
+                    }
+                }
+                
+                return { text: before + key + after, cursorPos: cursorPos + 1 };
+            }
+            
+            applyTone(word, toneNum) {
+                // Find the vowel to apply tone to
+                const vowels = 'aăâeêioôơuưyAĂÂEÊIOÔƠUƯY';
+                let vowelPositions = [];
+                
+                for (let i = 0; i < word.length; i++) {
+                    if (vowels.includes(word[i])) {
+                        vowelPositions.push(i);
+                    }
+                }
+                
+                if (vowelPositions.length === 0) return word;
+                
+                // Pick the right vowel position based on Vietnamese rules
+                let targetPos = vowelPositions[vowelPositions.length - 1];
+                if (vowelPositions.length >= 2) {
+                    targetPos = vowelPositions[vowelPositions.length > 2 ? 1 : vowelPositions.length - 1];
+                }
+                
+                const char = word[targetPos].toLowerCase();
+                const baseChar = this.getBaseVowel(char);
+                
+                if (this.charMap[baseChar]?.[toneNum]) {
+                    // Need to preserve modifier if any
+                    let newChar = this.charMap[baseChar][toneNum];
+                    
+                    // Check if original had modifier
+                    if (char !== baseChar) {
+                        const modifier = char === 'ă' || char === 'â' ? '^' : 
+                                        char === 'ê' ? '^' :
+                                        char === 'ô' ? '^' :
+                                        char === 'ơ' || char === 'ư' ? 'w' : null;
+                        if (modifier && this.charMap[char]?.[toneNum]) {
+                            newChar = this.charMap[char][toneNum];
+                        }
+                    }
+                    
+                    if (word[targetPos] === word[targetPos].toUpperCase()) {
+                        newChar = newChar.toUpperCase();
+                    }
+                    
+                    return word.substring(0, targetPos) + newChar + word.substring(targetPos + 1);
+                }
+                
+                return word;
+            }
+            
+            getBaseVowel(char) {
+                const map = {
+                    'ă': 'a', 'â': 'a', 'ắ': 'ă', 'ằ': 'ă', 'ẳ': 'ă', 'ẵ': 'ă', 'ặ': 'ă',
+                    'ấ': 'â', 'ầ': 'â', 'ẩ': 'â', 'ẫ': 'â', 'ậ': 'â',
+                    'á': 'a', 'à': 'a', 'ả': 'a', 'ã': 'a', 'ạ': 'a',
+                    'ê': 'e', 'ế': 'ê', 'ề': 'ê', 'ể': 'ê', 'ễ': 'ê', 'ệ': 'ê',
+                    'é': 'e', 'è': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ẹ': 'e',
+                    'í': 'i', 'ì': 'i', 'ỉ': 'i', 'ĩ': 'i', 'ị': 'i',
+                    'ô': 'o', 'ơ': 'o', 'ố': 'ô', 'ồ': 'ô', 'ổ': 'ô', 'ỗ': 'ô', 'ộ': 'ô',
+                    'ớ': 'ơ', 'ờ': 'ơ', 'ở': 'ơ', 'ỡ': 'ơ', 'ợ': 'ơ',
+                    'ó': 'o', 'ò': 'o', 'ỏ': 'o', 'õ': 'o', 'ọ': 'o',
+                    'ư': 'u', 'ứ': 'ư', 'ừ': 'ư', 'ử': 'ư', 'ữ': 'ư', 'ự': 'ư',
+                    'ú': 'u', 'ù': 'u', 'ủ': 'u', 'ũ': 'u', 'ụ': 'u',
+                    'ý': 'y', 'ỳ': 'y', 'ỷ': 'y', 'ỹ': 'y', 'ỵ': 'y',
+                };
+                return map[char] || char;
+            }
+            
+            toggle() {
+                this.enabled = !this.enabled;
+            }
+            
+            setMethod(method) {
+                this.method = method;
+            }
+        }
+        
+        // Initialize
+        const ime = new VietFluxDemo();
+        const input = document.getElementById('input');
+        const methodBtn = document.getElementById('methodBtn');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const statusText = document.getElementById('statusText');
+        const methodDisplay = document.getElementById('methodDisplay');
+        const bufferDisplay = document.getElementById('bufferDisplay');
+        
+        function updateStatus() {
+            const status = ime.enabled ? 'Sẵn sàng' : 'Đã tắt';
+            statusText.textContent = `${status} - ${ime.method.toUpperCase()}`;
+            methodDisplay.textContent = ime.method.toUpperCase();
+            methodBtn.textContent = ime.method.toUpperCase();
+            toggleBtn.textContent = ime.enabled ? 'Bật' : 'Tắt';
+            toggleBtn.classList.toggle('active', ime.enabled);
+        }
+        
+        input.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
+            if (e.key.length !== 1) return;
+            
+            e.preventDefault();
+            
+            const result = ime.processKey(e.key, input.value, input.selectionStart);
+            input.value = result.text;
+            input.selectionStart = input.selectionEnd = result.cursorPos;
+            
+            // Update buffer display
+            const wordMatch = result.text.substring(0, result.cursorPos).match(/[a-zA-ZăâêôơưđĂÂÊÔƠƯĐ]+$/);
+            bufferDisplay.textContent = wordMatch ? wordMatch[0] : '-';
+        });
+        
+        methodBtn.addEventListener('click', () => {
+            ime.setMethod(ime.method === 'telex' ? 'vni' : 'telex');
+            updateStatus();
+        });
+        
+        toggleBtn.addEventListener('click', () => {
+            ime.toggle();
+            updateStatus();
+        });
+        
+        clearBtn.addEventListener('click', () => {
+            input.value = '';
+            bufferDisplay.textContent = '-';
+            input.focus();
+        });
+        
+        updateStatus();
+    </script>
+</body>
+</html>
