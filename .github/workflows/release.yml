@@ -71,6 +71,7 @@ jobs:
 
       - name: Install Tauri CLI
         run: npm install @tauri-apps/cli
+        working-directory: app/src-tauri
 
       - name: Build Tauri App
         run: npx tauri build ${{ matrix.args }}
@@ -125,6 +126,15 @@ jobs:
           echo "=== Downloaded artifacts ==="
           find artifacts -type f 2>/dev/null || echo "No artifacts found"
 
+      - name: Get tag message
+        id: tag_message
+        run: |
+          git fetch origin tag ${{ github.ref_name }} --force
+          TAG_MSG=$(git for-each-ref --format='%(contents)' refs/tags/${{ github.ref_name }})
+          echo "message<<EOF" >> $GITHUB_OUTPUT
+          echo "$TAG_MSG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -134,27 +144,6 @@ jobs:
             artifacts/**/*.dmg
             artifacts/**/*.AppImage
             artifacts/**/*.deb
-          body: |
-            ## 📥 VietFlux ${{ github.ref_name }}
-
-            ### Tải về và cài đặt
-
-            | Platform | File | Hướng dẫn |
-            |----------|------|-----------|
-            | 🪟 Windows | `.exe` hoặc `.msi` | Double-click để cài đặt |
-            | 🍎 macOS (Intel) | `x64.dmg` | Kéo vào Applications |
-            | 🍎 macOS (Apple Silicon) | `arm64.dmg` | Kéo vào Applications |
-            | 🐧 Linux | `.AppImage` hoặc `.deb` | Chạy hoặc `dpkg -i` |
-
-            ### Sau khi cài đặt
-            - VietFlux chạy trong **khay hệ thống** (system tray)
-            - Click vào icon để mở settings
-            - Bắt đầu gõ tiếng Việt!
-
-            ### Phím tắt
-            - `Ctrl + Shift`: Bật/tắt VietFlux
-
-            ---
-            📖 [Hướng dẫn chi tiết](https://github.com/ThanhNguyxn/vietflux-ime/blob/main/docs/INSTALL.md)
+          body: ${{ steps.tag_message.outputs.message }}
           draft: false
           prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
