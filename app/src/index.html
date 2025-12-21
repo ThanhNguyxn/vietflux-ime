@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VietFlux IME</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            user-select: none;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background: var(--surface);
+            border-radius: 8px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+
+        .status-dot.off {
+            background: #ef4444;
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        button {
+            flex: 1;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .btn-secondary {
+            background: var(--surface);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background: #334155;
+        }
+
+        .btn-secondary.active {
+            background: var(--success);
+            color: white;
+        }
+
+        .shortcuts {
+            flex: 1;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .shortcuts h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+        }
+
+        .shortcut-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        kbd {
+            background: var(--surface);
+            padding: 0.125rem 0.375rem;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .hide-btn {
+            margin-top: 1rem;
+            background: transparent;
+            border: 1px solid var(--surface);
+            color: var(--text-muted);
+        }
+
+        .hide-btn:hover {
+            background: var(--surface);
+            color: var(--text);
+        }
+    </style>
+</head>
+
+<body>
+    <h1>⚡ VietFlux</h1>
+
+    <div class="status">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Đang bật - Telex</span>
+    </div>
+
+    <div class="controls">
+        <button class="btn-secondary active" id="telexBtn">Telex</button>
+        <button class="btn-secondary" id="vniBtn">VNI</button>
+        <button class="btn-primary" id="toggleBtn">Tắt</button>
+    </div>
+
+    <div class="shortcuts">
+        <h3>Phím tắt Telex</h3>
+        <div class="shortcut-row">
+            <span><kbd>aa</kbd> → â</span>
+            <span><kbd>aw</kbd> → ă</span>
+            <span><kbd>dd</kbd> → đ</span>
+        </div>
+        <div class="shortcut-row">
+            <span><kbd>s</kbd> sắc</span>
+            <span><kbd>f</kbd> huyền</span>
+            <span><kbd>r</kbd> hỏi</span>
+        </div>
+        <div class="shortcut-row">
+            <span><kbd>x</kbd> ngã</span>
+            <span><kbd>j</kbd> nặng</span>
+        </div>
+    </div>
+
+    <button class="hide-btn" id="hideBtn">Ẩn vào khay hệ thống</button>
+
+    <script>
+        const { invoke } = window.__TAURI__.core;
+        const { getCurrentWindow } = window.__TAURI__.window;
+
+        let enabled = true;
+        let method = 'telex';
+
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const telexBtn = document.getElementById('telexBtn');
+        const vniBtn = document.getElementById('vniBtn');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const hideBtn = document.getElementById('hideBtn');
+
+        function updateUI() {
+            statusDot.className = 'status-dot' + (enabled ? '' : ' off');
+            statusText.textContent = (enabled ? 'Đang bật' : 'Đã tắt') + ' - ' + method.toUpperCase();
+            toggleBtn.textContent = enabled ? 'Tắt' : 'Bật';
+            telexBtn.classList.toggle('active', method === 'telex');
+            vniBtn.classList.toggle('active', method === 'vni');
+        }
+
+        telexBtn.addEventListener('click', async () => {
+            method = 'telex';
+            await invoke('set_method', { method: 'telex' });
+            updateUI();
+        });
+
+        vniBtn.addEventListener('click', async () => {
+            method = 'vni';
+            await invoke('set_method', { method: 'vni' });
+            updateUI();
+        });
+
+        toggleBtn.addEventListener('click', async () => {
+            enabled = await invoke('toggle');
+            updateUI();
+        });
+
+        hideBtn.addEventListener('click', async () => {
+            const window = getCurrentWindow();
+            await window.hide();
+        });
+
+        updateUI();
+    </script>
+</body>
+
+</html>

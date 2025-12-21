@@ -5,7 +5,7 @@
 <h1 align="center">⚡ VietFlux IME</h1>
 
 <p align="center">
-  <strong>Bộ gõ tiếng Việt thông minh chạy trên trình duyệt</strong>
+  <strong>Bộ gõ tiếng Việt native cho Windows, macOS, Linux</strong>
 </p>
 
 <p align="center">
@@ -15,142 +15,96 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=flat-square" alt="License: MIT"/></a>
 </p>
 
-<p align="center">
-  <a href="#-tại-sao-chọn-vietflux">Tại sao?</a> •
-  <a href="#-cài-đặt">Cài đặt</a> •
-  <a href="#-tính-năng">Tính năng</a> •
-  <a href="#-phím-tắt">Phím tắt</a>
-</p>
-
 ---
 
 ## 🎯 Tại sao chọn VietFlux?
 
-| Vấn đề với bộ gõ cũ | VietFlux giải quyết |
-|---------------------|---------------------|
-| ❌ Phải cài đặt phức tạp | ✅ **Chạy ngay** - Chỉ cần mở file HTML! |
-| ❌ Chậm, lag khi gõ nhanh | ✅ **Siêu nhanh** - Viết bằng Rust + WASM |
-| ❌ Chỉ chạy trên 1 OS | ✅ **Cross-platform** - Chạy mọi nơi có browser |
-| ❌ Gõ `được` ra `đưọc` | ✅ **Smart ươ** - Tự động đặt dấu đúng chỗ |
+| Vấn đề | VietFlux |
+|--------|----------|
+| ❌ Phải cài đặt phức tạp | ✅ **1-click install** - Tải về, cài, xong! |
+| ❌ Chậm, lag | ✅ **Siêu nhanh** - Viết bằng Rust |
+| ❌ Chỉ 1 OS | ✅ **Windows + macOS + Linux** |
+| ❌ Gõ `được` ra `đưọc` | ✅ **Smart ươ** - Đặt dấu đúng |
 
 ---
 
 ## 📦 Cài đặt
 
-### Bước 1: Tải về
+### 1️⃣ Tải về
 
-👉 **[Tải VietFlux tại đây](https://github.com/ThanhNguyxn/vietflux-ime/releases/latest)**
+👉 **[Tải VietFlux](https://github.com/ThanhNguyxn/vietflux-ime/releases/latest)**
 
-| Hệ điều hành | File tải |
-|--------------|----------|
-| 🪟 Windows | `VietFlux-*-Windows.zip` |
-| 🍎 macOS / 🐧 Linux | `VietFlux-*-Linux-macOS.tar.gz` |
+| OS | File |
+|----|------|
+| 🪟 Windows | `.exe` hoặc `.msi` |
+| 🍎 macOS Intel | `x64.dmg` |
+| 🍎 macOS Apple Silicon | `arm64.dmg` |
+| 🐧 Linux | `.AppImage` hoặc `.deb` |
 
-### Bước 2: Giải nén
+### 2️⃣ Cài đặt
 
-**Windows:** Click chuột phải → Extract All
+- **Windows**: Double-click file `.exe` hoặc `.msi`
+- **macOS**: Mở `.dmg`, kéo vào Applications
+- **Linux**: Chạy `.AppImage` hoặc `sudo dpkg -i *.deb`
 
-**macOS/Linux:**
-```bash
-tar -xzf VietFlux-*-Linux-macOS.tar.gz
-```
+### 3️⃣ Sử dụng
 
-### Bước 3: Chạy
-
-**Windows:** Double-click `Run-VietFlux.bat` hoặc mở `index.html`
-
-**macOS/Linux:** 
-```bash
-./run-vietflux.sh
-# hoặc mở index.html trong browser
-```
-
-**Xong!** Bắt đầu gõ tiếng Việt! 🎉
-
----
-
-## ✨ Tính năng
-
-| Tính năng | Mô tả |
-|-----------|-------|
-| ⚡ **Siêu nhanh** | Core engine viết bằng Rust + WebAssembly |
-| 🎯 **Telex & VNI** | Hỗ trợ cả hai phương thức gõ phổ biến |
-| 🌐 **Cross-platform** | Windows, macOS, Linux - chỉ cần browser |
-| 🧠 **Smart ươ** | Tự động đặt dấu đúng vị trí trong `ươ` |
-| 🔍 **Nhận diện English** | Từ như `new` không bị biến thành `neư` |
+VietFlux chạy trong **khay hệ thống** (system tray). Click icon để mở settings.
 
 ---
 
 ## ⌨️ Phím tắt
 
-### Telex
+### Hệ thống
+| Phím | Chức năng |
+|------|-----------|
+| `Ctrl + Shift` | Bật/tắt VietFlux |
 
-| Phím | Kết quả | Ví dụ |
-|:----:|:-------:|:-----:|
-| `aa` | â | `caam` → cầm |
-| `ee` | ê | `been` → bên |
-| `oo` | ô | `coon` → côn |
-| `aw` | ă | `awm` → ăm |
-| `ow` | ơ | `tow` → tơ |
-| `uw` | ư | `tuw` → tư |
-| `dd` | đ | `ddi` → đi |
-| `s` | sắc ´ | `as` → á |
-| `f` | huyền ` | `af` → à |
-| `r` | hỏi ̉ | `ar` → ả |
-| `x` | ngã ˜ | `ax` → ã |
-| `j` | nặng ̣ | `aj` → ạ |
+### Telex
+| Phím | Kết quả |
+|:----:|:-------:|
+| `aa` | â |
+| `aw` | ă |
+| `ow` | ơ |
+| `uw` | ư |
+| `dd` | đ |
+| `s/f/r/x/j` | sắc/huyền/hỏi/ngã/nặng |
 
 ### VNI
-
-| Phím | Kết quả | Ví dụ |
-|:----:|:-------:|:-----:|
-| `1` | sắc ´ | `a1` → á |
-| `2` | huyền ` | `a2` → à |
-| `3` | hỏi ̉ | `a3` → ả |
-| `4` | ngã ˜ | `a4` → ã |
-| `5` | nặng ̣ | `a5` → ạ |
-| `6` | mũ ^ | `a6` → â |
-| `7` | móc ̛ | `o7` → ơ |
-| `8` | trăng ̆ | `a8` → ă |
-| `9` | đ | `d9` → đ |
+| Phím | Kết quả |
+|:----:|:-------:|
+| `1-5` | sắc/huyền/hỏi/ngã/nặng |
+| `6/7/8` | mũ/móc/trăng |
+| `9` | đ |
 
 ---
 
 ## 🏗️ Kiến trúc
 
 ```
-┌────────────────────────────────────────┐
-│           VietFlux IME                  │
-├─────────┬─────────┬─────────┬──────────┤
-│ Windows │  macOS  │  Linux  │   Web    │
-│         (Chạy trên Browser)             │
-├─────────────────────────────────────────┤
-│            WebAssembly (WASM)           │
-├─────────────────────────────────────────┤
-│           Rust Core Engine              │
-└─────────────────────────────────────────┘
+┌──────────────────────────────────┐
+│         VietFlux App             │
+│     (Tauri - Rust + WebView)     │
+├──────────────────────────────────┤
+│         System Tray UI           │
+├──────────────────────────────────┤
+│        VietFlux Core             │
+│    (Rust Engine + Validation)    │
+└──────────────────────────────────┘
 ```
 
 ---
 
 ## 🤝 Đóng góp
 
-Xem [CONTRIBUTING.md](CONTRIBUTING.md) để biết cách đóng góp.
+Xem [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---
 
 ## 📝 License
 
-MIT License - Xem [LICENSE](LICENSE)
+MIT - Xem [LICENSE](LICENSE)
 
 ---
 
-## 🙏 Credits
-
-Inspired by [UniKey](https://www.unikey.org/)
-
----
-
-<p align="center">
-  Made with ❤️ in Vietnam 🇻🇳
-</p>
+<p align="center">Made with ❤️ in Vietnam 🇻🇳</p>

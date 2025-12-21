@@ -1,4 +1,4 @@
-name: Release
+name: Build Desktop App
 
 on:
   push:
@@ -8,145 +8,115 @@ on:
 permissions:
   contents: write
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
-  # ============================================
-  # Build Complete Web Package (all platforms)
-  # ============================================
-  build:
-    name: 📦 Build Release
-    runs-on: ubuntu-latest
+  build-tauri:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest"
+            args: "--target aarch64-apple-darwin"
+          - platform: "macos-latest"
+            args: "--target x86_64-apple-darwin"
+          - platform: "ubuntu-22.04"
+            args: ""
+          - platform: "windows-latest"
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: wasm32-unknown-unknown
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - name: Cache cargo
+      - name: Install dependencies (Ubuntu)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Cache Rust
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: core
+          workspaces: app/src-tauri
 
-      - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2.0.0"
 
-      - name: Build WASM
+      - name: Build Tauri App
         run: |
-          cd core
-          wasm-pack build --target web --release
+          cd app/src-tauri
+          cargo tauri build ${{ matrix.args }}
 
-      - name: Create Release Package
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+      - name: Upload artifacts (Windows)
+        if: matrix.platform == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            app/src-tauri/target/release/bundle/nsis/*.exe
+            app/src-tauri/target/release/bundle/msi/*.msi
 
-          # Create package directory
-          mkdir -p "VietFlux-${VERSION}"
+      - name: Upload artifacts (macOS)
+        if: matrix.platform == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ contains(matrix.args, 'aarch64') && 'arm64' || 'x64' }}
+          path: |
+            app/src-tauri/target/*/release/bundle/dmg/*.dmg
+            app/src-tauri/target/*/release/bundle/macos/*.app
 
-          # Copy WASM files
-          cp -r core/pkg "VietFlux-${VERSION}/wasm"
+      - name: Upload artifacts (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-installer
+          path: |
+            app/src-tauri/target/release/bundle/appimage/*.AppImage
+            app/src-tauri/target/release/bundle/deb/*.deb
 
-          # Copy web demo
-          cp platforms/web/index.html "VietFlux-${VERSION}/"
+  release:
+    needs: build-tauri
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-          # Update index.html to use local WASM
-          sed -i 's|import init.*|import init from "./wasm/vietflux_core.js";|' "VietFlux-${VERSION}/index.html" 2>/dev/null || true
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
-          # Create README for users
-          cat > "VietFlux-${VERSION}/README.txt" << 'EOF'
-          ╔════════════════════════════════════════════════════════════╗
-          ║              ⚡ VietFlux IME v${VERSION}                   ║
-          ║         Bộ gõ tiếng Việt hiệu năng cao                     ║
-          ╚════════════════════════════════════════════════════════════╝
-
-          CÁCH SỬ DỤNG:
-          ═════════════
-          1. Mở file "index.html" trong trình duyệt (Chrome, Firefox, Edge)
-          2. Bắt đầu gõ tiếng Việt!
-
-          PHÍM TẮT TELEX:
-          ════════════════
-          aa → â     ee → ê     oo → ô
-          aw → ă     ow → ơ     uw → ư
-          dd → đ
-          s → sắc    f → huyền   r → hỏi   x → ngã   j → nặng
-
-          PHÍM TẮT VNI:
-          ══════════════
-          1 → sắc    2 → huyền   3 → hỏi   4 → ngã   5 → nặng
-          6 → mũ     7 → móc     8 → trăng  9 → đ
-
-          GitHub: https://github.com/ThanhNguyxn/vietflux-ime
-          EOF
-
-          # Replace ${VERSION} in README
-          sed -i "s/\${VERSION}/${VERSION}/g" "VietFlux-${VERSION}/README.txt"
-
-          # Create Windows batch file
-          cat > "VietFlux-${VERSION}/Run-VietFlux.bat" << 'EOF'
-          @echo off
-          echo Opening VietFlux IME...
-          start "" "index.html"
-          EOF
-
-          # Create macOS/Linux shell script  
-          cat > "VietFlux-${VERSION}/run-vietflux.sh" << 'EOF'
-          #!/bin/bash
-          echo "Opening VietFlux IME..."
-          if command -v xdg-open &> /dev/null; then
-              xdg-open index.html
-          elif command -v open &> /dev/null; then
-              open index.html
-          else
-              echo "Please open index.html in your browser"
-          fi
-          EOF
-          chmod +x "VietFlux-${VERSION}/run-vietflux.sh"
-
-          # Create zip for Windows
-          zip -r "VietFlux-${VERSION}-Windows.zip" "VietFlux-${VERSION}"
-
-          # Create tar.gz for Linux/macOS
-          tar -czvf "VietFlux-${VERSION}-Linux-macOS.tar.gz" "VietFlux-${VERSION}"
-
-      - name: Get tag message
-        id: tag_message
-        run: |
-          git fetch origin tag ${{ github.ref_name }} --force
-          TAG_MSG=$(git for-each-ref --format='%(contents)' refs/tags/${{ github.ref_name }})
-          {
-            echo "message<<EOF"
-            echo "$TAG_MSG"
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
+      - name: List artifacts
+        run: find artifacts -type f
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            *.zip
-            *.tar.gz
+            artifacts/**/*.exe
+            artifacts/**/*.msi
+            artifacts/**/*.dmg
+            artifacts/**/*.AppImage  
+            artifacts/**/*.deb
           body: |
-            ## 📥 Hướng dẫn cài đặt
+            ## 📥 Tải về và cài đặt
 
-            ### Windows
-            1. Tải `VietFlux-${{ github.ref_name }}-Windows.zip`
-            2. Giải nén
-            3. Double-click `Run-VietFlux.bat` hoặc mở `index.html`
+            | Platform | File | Hướng dẫn |
+            |----------|------|-----------|
+            | 🪟 Windows | `.exe` hoặc `.msi` | Double-click để cài đặt |
+            | 🍎 macOS (Intel) | `x64.dmg` | Kéo vào Applications |
+            | 🍎 macOS (Apple Silicon) | `arm64.dmg` | Kéo vào Applications |
+            | 🐧 Linux | `.AppImage` hoặc `.deb` | Chạy hoặc `dpkg -i` |
 
-            ### macOS / Linux
-            1. Tải `VietFlux-${{ github.ref_name }}-Linux-macOS.tar.gz`
-            2. Giải nén: `tar -xzf VietFlux-*.tar.gz`
-            3. Chạy: `./run-vietflux.sh` hoặc mở `index.html`
+            ### Sau khi cài đặt
+            1. VietFlux sẽ chạy trong **khay hệ thống** (system tray)
+            2. Click vào icon để mở settings
+            3. Bắt đầu gõ tiếng Việt!
 
-            ---
-            ${{ steps.tag_message.outputs.message }}
-          generate_release_notes: ${{ steps.tag_message.outputs.message == '' }}
+            ### Phím tắt
+            - `Ctrl + Shift`: Bật/tắt VietFlux
           draft: false
           prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
