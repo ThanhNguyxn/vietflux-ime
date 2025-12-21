@@ -50,9 +50,13 @@ const FOREIGN_CLUSTERS: &[&str] = &[
     "ck", "dg", "ght", "wh", "wr",
 ];
 
-/// Invalid vowel patterns (English-like)
+/// Invalid vowel patterns (impossible in Vietnamese)
 const INVALID_VOWEL_PATTERNS: &[&str] = &[
-    "ou", "yo", "ea", "ee", "oo", "ie", "ei", 
+    // These vowel combinations don't exist in Vietnamese
+    "eư", "oư", "iư",  // ư cannot follow e, o, i directly
+    "ưe", "ưo", "ưy",  // Invalid ư combinations
+    "ou", "yo",        // English-like patterns
+    "ea", "ie", "ei",  // English diphthongs
 ];
 
 // ============================================================
@@ -138,36 +142,57 @@ pub fn is_valid_syllable(s: &str) -> bool {
 pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool {
     let lower = buffer.to_lowercase();
     
-    // Skip check if buffer has horn transforms (ư, ơ, ươ) - user typing Vietnamese intentionally
-    if has_horn_chars(&lower) {
+    // Skip check if buffer has Vietnamese diacritics (horn, circumflex, breve)
+    // User is typing Vietnamese intentionally
+    if has_vietnamese_diacritics(&lower) {
         return false;
     }
     
-    // Check for foreign clusters
-    for cluster in FOREIGN_CLUSTERS {
-        if lower.contains(cluster) {
-            return true;
-        }
+    // Skip check for valid typing sequences like "dodo" (typing đô)
+    if is_valid_typing_sequence(&lower) {
+        return false;
     }
     
-    // Check for invalid vowel patterns
+    // Check for invalid vowel patterns (eư, oư, etc)
     for pattern in INVALID_VOWEL_PATTERNS {
         if lower.contains(pattern) {
             return true;
         }
     }
     
+    // Check for foreign consonant clusters (not at start)
+    for cluster in FOREIGN_CLUSTERS {
+        if lower.contains(cluster) {
+            // Allow "tr" at the start (Vietnamese "tr")
+            if *cluster == "tr" && lower.starts_with("tr") {
+                continue;
+            }
+            // Check if cluster is after a vowel (foreign pattern)
+            if let Some(pos) = lower.find(cluster) {
+                if pos > 0 {
+                    let prev_char = lower.chars().nth(pos - 1);
+                    if prev_char.map(|c| crate::chars::is_vowel(c)).unwrap_or(false) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    
     // English prefix patterns: de+s (describe, design)
     if lower.starts_with("de") && modifier_key == Some('s') {
+        // But not "des" alone which could be Vietnamese
+        if lower.len() > 3 {
+            return true;
+        }
+    }
+    
+    // pr- prefix not at start of Vietnamese word
+    if lower.starts_with("pr") && lower.len() > 3 {
         return true;
     }
     
-    // pr- prefix (programming, prefix)
-    if lower.starts_with("pr") {
-        return true;
-    }
-    
-    // -tion, -sion endings
+    // -tion, -sion endings (clearly English)
     if lower.ends_with("tion") || lower.ends_with("sion") {
         return true;
     }
@@ -184,18 +209,47 @@ fn has_vowel(chars: &[char]) -> bool {
     chars.iter().any(|&c| crate::chars::is_vowel(c))
 }
 
-/// Check if string has horn characters (ư, ơ, ươ)
-fn has_horn_chars(s: &str) -> bool {
+/// Check if string has Vietnamese diacritics (horn, circumflex, breve)
+fn has_vietnamese_diacritics(s: &str) -> bool {
     for c in s.chars() {
-        if let Some(&(_, modifier, _)) = REVERSE_MAP.get(&c) {
-            if modifier == VowelMod::Horn {
+        if let Some(&(_, modifier, tone)) = REVERSE_MAP.get(&c) {
+            if modifier != VowelMod::None || tone != crate::chars::ToneMark::None {
                 return true;
             }
         }
-        if c == 'ư' || c == 'ơ' {
+        // Direct check for Vietnamese special chars
+        if matches!(c, 'ư' | 'ơ' | 'â' | 'ê' | 'ô' | 'ă' | 'đ') {
             return true;
         }
     }
+    false
+}
+
+/// Check if this is a valid Vietnamese typing sequence
+/// e.g., "dodo" could be typing "đô" (d→o→d→o where second d triggers stroke)
+fn is_valid_typing_sequence(s: &str) -> bool {
+    let lower = s.to_lowercase();
+    
+    // Patterns that look foreign but are valid Vietnamese typing sequences:
+    
+    // "dodo", "dodi" - typing đô, đồ, etc. with dd for đ
+    if lower.starts_with("do") && lower.chars().nth(2) == Some('d') {
+        return true;
+    }
+    
+    // "soso", "lolo" - typing có repeated consonants for emphasis
+    // But these could also be valid Vietnamese with tones added later
+    let chars: Vec<char> = lower.chars().collect();
+    if chars.len() >= 4 {
+        // Check if it's a simple repetition pattern like "xoxo"
+        if chars[0] == chars[2] && chars[1] == chars[3] {
+            // If first char is consonant and second is vowel, could be valid
+            if !crate::chars::is_vowel(chars[0]) && crate::chars::is_vowel(chars[1]) {
+                return true;
+            }
+        }
+    }
+    
     false
 }
 

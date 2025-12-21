@@ -131,14 +131,40 @@ pub fn has_modifier(ch: char) -> bool {
 /// 
 /// Rules (in order of priority):
 /// 1. If word contains ơ, ư, ă, â, ê, ô → put tone there
-/// 2. If there's only one vowel → put tone on it
-/// 3. If there are two vowels:
+/// 2. For ươ compound: put tone on ơ (second vowel)
+/// 3. If there's only one vowel → put tone on it
+/// 4. If there are two vowels:
 ///    - If vowel cluster is: ia, ua, ưa, oa, oe, ue, uy → put on first
 ///    - Otherwise → put on second (last)
-/// 4. If there are three vowels → put tone on the middle one
+/// 5. If there are three vowels → put tone on the middle one
 pub fn find_tone_position(chars: &[char], vowel_indices: &[usize]) -> Option<usize> {
     if vowel_indices.is_empty() {
         return None;
+    }
+    
+    // Special case: ươ compound - tone goes on ơ
+    if vowel_indices.len() >= 2 {
+        for i in 0..vowel_indices.len() - 1 {
+            let first_idx = vowel_indices[i];
+            let second_idx = vowel_indices[i + 1];
+            
+            let first = chars[first_idx].to_ascii_lowercase();
+            let second = chars[second_idx].to_ascii_lowercase();
+            
+            let first_base = chars::get_base(first);
+            let second_base = chars::get_base(second);
+            let first_mod = get_modifier(chars[first_idx]);
+            let second_mod = get_modifier(chars[second_idx]);
+            
+            // ươ compound: tone goes on ơ
+            if (first_base == 'u' && first_mod == VowelMod::Horn) ||
+               (second_base == 'o' && second_mod == VowelMod::Horn) {
+                // If we have ư + ơ, tone on ơ
+                if first_base == 'u' && second_base == 'o' {
+                    return Some(second_idx);
+                }
+            }
+        }
     }
     
     // Rule 1: Check for modified vowels first (ơ, ư, ă, â, ê, ô)
@@ -149,10 +175,10 @@ pub fn find_tone_position(chars: &[char], vowel_indices: &[usize]) -> Option<usi
     }
     
     match vowel_indices.len() {
-        // Rule 2: Single vowel
+        // Rule 3: Single vowel
         1 => Some(vowel_indices[0]),
         
-        // Rule 3: Two vowels
+        // Rule 4: Two vowels
         2 => {
             let first = chars[vowel_indices[0]].to_ascii_lowercase();
             let second = chars[vowel_indices[1]].to_ascii_lowercase();
@@ -164,7 +190,7 @@ pub fn find_tone_position(chars: &[char], vowel_indices: &[usize]) -> Option<usi
             let first_tone_pairs = [
                 ('i', 'a'), ('i', 'ê'), // ia, iê
                 ('u', 'a'), ('u', 'ô'), ('u', 'ơ'), // ua, uô, uơ
-                ('ư', 'a'), ('ư', 'ơ'), // ưa, ươ
+                ('ư', 'a'), ('ư', 'ơ'), // ưa, ươ  
                 ('o', 'a'), ('o', 'e'), // oa, oe
             ];
             
@@ -179,7 +205,7 @@ pub fn find_tone_position(chars: &[char], vowel_indices: &[usize]) -> Option<usi
             Some(vowel_indices[1])
         }
         
-        // Rule 4: Three or more vowels - middle one
+        // Rule 5: Three or more vowels - middle one
         _ => Some(vowel_indices[vowel_indices.len() / 2]),
     }
 }
