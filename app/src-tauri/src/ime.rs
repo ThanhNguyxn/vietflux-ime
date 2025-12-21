@@ -34,7 +34,7 @@ pub struct ProcessResult {
 }
 
 #[tauri::command]
-pub fn process_key(key: char, shift: bool) -> ProcessResult {
+pub fn process_key(key: char, _shift: bool) -> ProcessResult {
     let mut ime = IME.lock().unwrap();
     
     if !ime.enabled {
