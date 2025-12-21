@@ -1,0 +1,88 @@
+name: 🐛 Bug Report
+description: Báo lỗi để giúp chúng tôi cải thiện
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Cảm ơn bạn đã báo lỗi! Vui lòng điền đầy đủ thông tin bên dưới.
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Hệ điều hành
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS Sequoia (15)
+        - macOS Sonoma (14)
+        - macOS Ventura (13)
+        - Ubuntu 24.04
+        - Ubuntu 22.04
+        - Fedora 40+
+        - Arch Linux
+        - Khác
+    validations:
+      required: true
+
+  - type: dropdown
+    id: method
+    attributes:
+      label: Kiểu gõ đang dùng
+      options:
+        - Telex
+        - VNI
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Phiên bản VietFlux
+      placeholder: "v1.0.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Mô tả lỗi
+      description: Mô tả chi tiết lỗi bạn gặp phải
+      placeholder: Khi tôi gõ "xxx" thì...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Các bước tái hiện
+      description: Làm thế nào để tái hiện lỗi?
+      value: |
+        1. Mở app '...'
+        2. Gõ '...'
+        3. Thấy lỗi '...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Kết quả mong đợi
+      placeholder: Tôi mong đợi...
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots hoặc video
+      description: Nếu có thể, đính kèm ảnh hoặc video
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Tần suất xảy ra
+      options:
+        - Luôn luôn (100%)
+        - Thường xuyên (>50%)
+        - Thỉnh thoảng (<50%)
+        - Hiếm (<10%)
