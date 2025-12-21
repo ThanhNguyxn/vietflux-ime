@@ -38,6 +38,26 @@ jobs:
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
+      - name: Inject version
+        shell: bash
+        run: |
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "Injecting version $VERSION"
+            
+            # Update core/Cargo.toml
+            sed -i.bak "s/^version = \".*\"/version = \"$VERSION\"/" core/Cargo.toml
+            rm core/Cargo.toml.bak
+            
+            # Update app/src-tauri/Cargo.toml
+            sed -i.bak "s/^version = \".*\"/version = \"$VERSION\"/" app/src-tauri/Cargo.toml
+            rm app/src-tauri/Cargo.toml.bak
+            
+            # Update tauri.conf.json
+            sed -i.bak "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" app/src-tauri/tauri.conf.json
+            rm app/src-tauri/tauri.conf.json.bak
+          fi
+
       - name: Install dependencies (Ubuntu)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
