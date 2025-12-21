@@ -43,6 +43,7 @@ pub const VALID_VOWEL_PATTERNS: &[&str] = &[
 ];
 
 /// Foreign word consonant clusters (not valid in Vietnamese)
+#[allow(dead_code)]
 const FOREIGN_CLUSTERS: &[&str] = &[
     "tr", "pr", "cr", "br", "dr", "gr", "fr",  // After finals
     "st", "sp", "sc", "sk", "sm", "sn", "sl", "sw",
@@ -51,6 +52,7 @@ const FOREIGN_CLUSTERS: &[&str] = &[
 ];
 
 /// Invalid vowel patterns (impossible in Vietnamese)
+#[allow(dead_code)]
 const INVALID_VOWEL_PATTERNS: &[&str] = &[
     // These vowel combinations don't exist in Vietnamese
     "eư", "oư", "iư",  // ư cannot follow e, o, i directly

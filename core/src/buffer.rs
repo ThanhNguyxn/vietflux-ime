@@ -36,7 +36,8 @@ impl BufferChar {
 pub struct Buffer {
     /// Characters in buffer
     chars: Vec<BufferChar>,
-    /// Current cursor position
+    /// Current cursor position (reserved for future use)
+    #[allow(dead_code)]
     cursor: usize,
 }
 

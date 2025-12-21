@@ -8,10 +8,6 @@ on:
       - "app/**"
       - "Cargo.toml"
       - ".github/workflows/ci.yml"
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
-      - "platforms/web/**"
   pull_request:
     branches: [main]
 
@@ -108,7 +104,7 @@ jobs:
     name: 📊 Coverage
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    continue-on-error: true # Don't fail the whole CI if coverage fails
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
