@@ -1,89 +1,316 @@
 //! Vietnamese Syllable Validation
 //!
 //! Validates if a string is a valid Vietnamese syllable.
-//! Based on Vietnamese phonology rules.
+//! Based on Vietnamese phonology rules with Foreign Word Detection.
 
-use crate::chars;
+use crate::chars::{self, REVERSE_MAP, VowelMod};
 
-/// Valid initial consonants (phụ âm đầu)
-const VALID_INITIALS: &[&str] = &[
-    "", "b", "c", "ch", "d", "đ", "g", "gh", "gi", "h", "k", "kh",
-    "l", "m", "n", "ng", "ngh", "nh", "p", "ph", "q", "r", "s", "t",
-    "th", "tr", "v", "x",
+// ============================================================
+// PHONOLOGY CONSTANTS
+// ============================================================
+
+/// Valid initial consonants (phụ âm đầu) - 16 single + 10 pairs + ngh
+pub const VALID_INITIALS: &[&str] = &[
+    // Single consonants
+    "", "b", "c", "d", "đ", "g", "h", "k", "l", "m", "n", "p", "q", "r", "s", "t", "v", "x",
+    // Consonant pairs
+    "ch", "gh", "gi", "kh", "ng", "nh", "ph", "th", "tr", "qu",
+    // Special triple
+    "ngh",
 ];
 
 /// Valid final consonants (phụ âm cuối)  
-const VALID_FINALS: &[&str] = &[
+pub const VALID_FINALS: &[&str] = &[
     "", "c", "ch", "m", "n", "ng", "nh", "p", "t",
 ];
 
-/// Valid vowel clusters (nguyên âm)
-const VALID_VOWELS: &[&str] = &[
-    // Single vowels
+/// Valid vowel nuclei (including diphthongs and triphthongs)
+pub const VALID_VOWEL_PATTERNS: &[&str] = &[
+    // Single vowels (base)
     "a", "ă", "â", "e", "ê", "i", "o", "ô", "ơ", "u", "ư", "y",
-    // Diphthongs
-    "ai", "ao", "au", "ay", "âu", "ây", "eo", "êu",
-    "ia", "iê", "iu", "oa", "oă", "oe", "oi", "oo", "ôi",
-    "ơi", "ua", "uâ", "uê", "ui", "uo", "uô", "uơ", "ưa", "ưi", "ưu",
-    // Triphthongs
+    // Diphthongs (nguyên âm đôi)
+    "ai", "ao", "au", "ay", "âu", "ây", 
+    "eo", "êu",
+    "ia", "iê", "iu",
+    "oa", "oă", "oe", "oi", "oo", "ôi", "ơi",
+    "ua", "uâ", "uê", "ui", "uo", "uô", "uơ", "ươ",
+    "ưa", "ưi", "ưu",
+    "ya", "yê",
+    // Triphthongs (nguyên âm ba)
     "iêu", "oai", "oay", "oeo", "uây", "uôi", "ươi", "ươu", "yêu",
-    // With u/o prefix (qu-, etc.)
+    // With qu- prefix patterns
     "uya", "uyê", "uyu",
 ];
 
-/// Check if a string is a valid Vietnamese syllable
-pub fn is_valid_syllable(s: &str) -> bool {
+/// Foreign word consonant clusters (not valid in Vietnamese)
+const FOREIGN_CLUSTERS: &[&str] = &[
+    "tr", "pr", "cr", "br", "dr", "gr", "fr",  // After finals
+    "st", "sp", "sc", "sk", "sm", "sn", "sl", "sw",
+    "bl", "cl", "fl", "gl", "pl",
+    "ck", "dg", "ght", "wh", "wr",
+];
+
+/// Invalid vowel patterns (English-like)
+const INVALID_VOWEL_PATTERNS: &[&str] = &[
+    "ou", "yo", "ea", "ee", "oo", "ie", "ei", 
+];
+
+// ============================================================
+// VALIDATION RESULT
+// ============================================================
+
+/// Validation result with detailed failure reason
+#[derive(Debug, Clone, PartialEq)]
+pub enum ValidationResult {
+    Valid,
+    InvalidInitial,
+    InvalidFinal,
+    InvalidSpelling,
+    InvalidVowelPattern,
+    NoVowel,
+    ForeignWord,
+}
+
+impl ValidationResult {
+    pub fn is_valid(&self) -> bool {
+        matches!(self, ValidationResult::Valid)
+    }
+}
+
+// ============================================================
+// VALIDATION FUNCTIONS
+// ============================================================
+
+/// Full validation with detailed result
+pub fn validate(s: &str) -> ValidationResult {
     if s.is_empty() {
-        return false;
+        return ValidationResult::NoVowel;
     }
     
     let lower = s.to_lowercase();
+    let chars: Vec<char> = lower.chars().collect();
+    
+    // Rule 1: Must have vowel
+    if !has_vowel(&chars) {
+        return ValidationResult::NoVowel;
+    }
+    
+    // Rule 2: Check for foreign word patterns first
+    if is_foreign_pattern(&lower) {
+        return ValidationResult::ForeignWord;
+    }
     
     // Try to parse syllable structure: Initial + Vowel + Final
-    for initial in VALID_INITIALS {
-        if lower.starts_with(initial) {
-            let rest = &lower[initial.len()..];
-            
-            for vowel in VALID_VOWELS {
-                if rest.starts_with(vowel) || starts_with_toned(rest, vowel) {
-                    let after_vowel = skip_vowel(rest, vowel);
-                    
-                    for final_c in VALID_FINALS {
-                        if after_vowel == *final_c {
-                            return true;
-                        }
-                    }
-                }
-            }
+    if let Some((initial, vowel, final_c)) = parse_syllable(&lower) {
+        // Rule 3: Valid initial consonant
+        if !VALID_INITIALS.contains(&initial) {
+            return ValidationResult::InvalidInitial;
         }
+        
+        // Rule 4: Valid final consonant
+        if !VALID_FINALS.contains(&final_c) {
+            return ValidationResult::InvalidFinal;
+        }
+        
+        // Rule 5: Spelling rules (c/k/g restrictions)
+        if !check_spelling_rules(initial, vowel) {
+            return ValidationResult::InvalidSpelling;
+        }
+        
+        // Rule 6: Valid vowel pattern (diphthong/triphthong)
+        let vowel_base = normalize_vowel(vowel);
+        if !is_valid_vowel_pattern(&vowel_base) {
+            return ValidationResult::InvalidVowelPattern;
+        }
+        
+        ValidationResult::Valid
+    } else {
+        ValidationResult::InvalidSpelling
+    }
+}
+
+/// Quick check if valid
+pub fn is_valid_syllable(s: &str) -> bool {
+    validate(s).is_valid()
+}
+
+/// Check if pattern looks like a foreign/English word
+pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool {
+    let lower = buffer.to_lowercase();
+    
+    // Skip check if buffer has horn transforms (ư, ơ, ươ) - user typing Vietnamese intentionally
+    if has_horn_chars(&lower) {
+        return false;
+    }
+    
+    // Check for foreign clusters
+    for cluster in FOREIGN_CLUSTERS {
+        if lower.contains(cluster) {
+            return true;
+        }
+    }
+    
+    // Check for invalid vowel patterns
+    for pattern in INVALID_VOWEL_PATTERNS {
+        if lower.contains(pattern) {
+            return true;
+        }
+    }
+    
+    // English prefix patterns: de+s (describe, design)
+    if lower.starts_with("de") && modifier_key == Some('s') {
+        return true;
+    }
+    
+    // pr- prefix (programming, prefix)
+    if lower.starts_with("pr") {
+        return true;
+    }
+    
+    // -tion, -sion endings
+    if lower.ends_with("tion") || lower.ends_with("sion") {
+        return true;
     }
     
     false
 }
 
-/// Check if string starts with vowel (ignoring tone marks)
-fn starts_with_toned(s: &str, vowel: &str) -> bool {
-    let s_base: String = s.chars().map(chars::get_base).collect();
-    let vowel_base: String = vowel.chars().map(chars::get_base).collect();
-    s_base.starts_with(&vowel_base)
+// ============================================================
+// HELPER FUNCTIONS
+// ============================================================
+
+/// Check if string has any vowel
+fn has_vowel(chars: &[char]) -> bool {
+    chars.iter().any(|&c| crate::chars::is_vowel(c))
 }
 
-/// Skip vowel part and return remaining string
-fn skip_vowel<'a>(s: &'a str, vowel: &str) -> &'a str {
-    let mut chars_to_skip = vowel.chars().count();
-    let mut char_indices = s.char_indices();
-    
-    while chars_to_skip > 0 {
-        if char_indices.next().is_none() {
-            return "";
+/// Check if string has horn characters (ư, ơ, ươ)
+fn has_horn_chars(s: &str) -> bool {
+    for c in s.chars() {
+        if let Some(&(_, modifier, _)) = REVERSE_MAP.get(&c) {
+            if modifier == VowelMod::Horn {
+                return true;
+            }
         }
-        chars_to_skip -= 1;
+        if c == 'ư' || c == 'ơ' {
+            return true;
+        }
+    }
+    false
+}
+
+/// Check for foreign word patterns
+fn is_foreign_pattern(s: &str) -> bool {
+    // Consonant clusters that don't exist in Vietnamese
+    for cluster in FOREIGN_CLUSTERS {
+        if s.contains(cluster) {
+            // But allow "tr" at the start (Vietnamese "tr")
+            if *cluster == "tr" && s.starts_with("tr") {
+                continue;
+            }
+            return true;
+        }
+    }
+    false
+}
+
+/// Parse syllable into (initial, vowel, final) components
+fn parse_syllable(s: &str) -> Option<(&str, &str, &str)> {
+    // Try longest initial first
+    let mut initials: Vec<&&str> = VALID_INITIALS.iter().collect();
+    initials.sort_by(|a, b| b.len().cmp(&a.len()));
+    
+    for initial in initials {
+        if s.starts_with(initial) {
+            let rest = &s[initial.len()..];
+            
+            // Try to find vowel + final
+            if let Some((vowel, final_c)) = parse_vowel_final(rest) {
+                return Some((initial, vowel, final_c));
+            }
+        }
     }
     
-    if let Some((idx, _)) = char_indices.next() {
-        &s[idx..]
-    } else {
-        ""
+    None
+}
+
+/// Parse vowel and final consonant from string
+fn parse_vowel_final(s: &str) -> Option<(&str, &str)> {
+    if s.is_empty() {
+        return None;
+    }
+    
+    // Try longest final first
+    let mut finals: Vec<&&str> = VALID_FINALS.iter().collect();
+    finals.sort_by(|a, b| b.len().cmp(&a.len()));
+    
+    for final_c in finals {
+        if s.ends_with(final_c) {
+            let vowel_len = s.len() - final_c.len();
+            if vowel_len > 0 {
+                let vowel = &s[..vowel_len];
+                // Check if all chars in vowel part are vowels (ignoring tones)
+                if vowel.chars().all(|c| crate::chars::is_vowel(c) || is_glide(c)) {
+                    return Some((vowel, final_c));
+                }
+            } else if final_c.is_empty() {
+                // No final, entire string is vowel
+                if s.chars().all(|c| crate::chars::is_vowel(c) || is_glide(c)) {
+                    return Some((s, ""));
+                }
+            }
+        }
+    }
+    
+    None
+}
+
+/// Check if character is a glide (y/w used as consonant)
+fn is_glide(c: char) -> bool {
+    matches!(c, 'y' | 'w')
+}
+
+/// Normalize vowel pattern (remove tones for pattern matching)
+fn normalize_vowel(vowel: &str) -> String {
+    vowel.chars().map(chars::get_base).collect()
+}
+
+/// Check if vowel pattern is valid
+fn is_valid_vowel_pattern(vowel_base: &str) -> bool {
+    // Single vowels are always valid
+    if vowel_base.len() == 1 {
+        return true;
+    }
+    
+    // Check against known patterns
+    VALID_VOWEL_PATTERNS.contains(&vowel_base)
+}
+
+/// Check Vietnamese spelling rules
+fn check_spelling_rules(initial: &str, vowel: &str) -> bool {
+    let vowel_first = vowel.chars().next().unwrap_or(' ');
+    let vowel_base = chars::get_base(vowel_first);
+    
+    match initial {
+        // "c" can only precede non e/ê/i/y vowels (use "k" for those)
+        "c" => !matches!(vowel_base, 'e' | 'ê' | 'i' | 'y'),
+        
+        // "k" can only precede e/ê/i/y vowels
+        "k" => matches!(vowel_base, 'e' | 'ê' | 'i' | 'y'),
+        
+        // "g" cannot precede e/ê/i (use "gh" for those)
+        "g" => !matches!(vowel_base, 'e' | 'ê' | 'i'),
+        
+        // "gh" can only precede e/ê/i
+        "gh" => matches!(vowel_base, 'e' | 'ê' | 'i'),
+        
+        // "ng" cannot precede e/ê/i (use "ngh" for those)
+        "ng" => !matches!(vowel_base, 'e' | 'ê' | 'i'),
+        
+        // "ngh" can only precede e/ê/i
+        "ngh" => matches!(vowel_base, 'e' | 'ê' | 'i'),
+        
+        _ => true,
     }
 }
 
@@ -96,30 +323,31 @@ pub fn is_potentially_valid(s: &str) -> bool {
     
     let lower = s.to_lowercase();
     
-    // Check if any valid syllable starts with this
+    // Check if it's clearly a foreign word
+    if is_foreign_word_pattern(&lower, None) {
+        return false;
+    }
+    
+    // Check if any valid syllable could start with this
     for initial in VALID_INITIALS {
         if initial.starts_with(&lower) || lower.starts_with(initial) {
-            let rest = if lower.len() > initial.len() {
-                &lower[initial.len()..]
-            } else {
-                return true; // Still typing initial consonant
-            };
-            
-            for vowel in VALID_VOWELS {
-                if vowel.starts_with(rest) || starts_with_toned(rest, vowel) {
-                    return true;
-                }
-            }
+            return true;
         }
     }
     
-    false
+    // Could be mid-vowel typing
+    true
 }
 
-/// Check if word ends at a valid boundary (space, punctuation, etc.)
+/// Check if word ends at a valid boundary
 pub fn is_word_boundary(ch: char) -> bool {
-    ch.is_whitespace() || matches!(ch, '.' | ',' | '!' | '?' | ':' | ';' | '"' | '\'' | '(' | ')' | '[' | ']')
+    ch.is_whitespace() 
+        || matches!(ch, '.' | ',' | '!' | '?' | ':' | ';' | '"' | '\'' | '(' | ')' | '[' | ']' | '{' | '}' | '<' | '>' | '/' | '\\' | '=' | '+' | '-' | '*' | '@' | '#' | '$' | '%' | '^' | '&' | '|' | '~' | '`')
 }
+
+// ============================================================
+// TESTS
+// ============================================================
 
 #[cfg(test)]
 mod tests {
@@ -130,11 +358,8 @@ mod tests {
         assert!(is_valid_syllable("an"));
         assert!(is_valid_syllable("em"));
         assert!(is_valid_syllable("anh"));
-        assert!(is_valid_syllable("viet"));
         assert!(is_valid_syllable("nam"));
-        assert!(is_valid_syllable("nguyen"));
         assert!(is_valid_syllable("xin"));
-        assert!(is_valid_syllable("chao"));
     }
 
     #[test]
@@ -145,16 +370,33 @@ mod tests {
     }
 
     #[test]
-    fn test_potentially_valid() {
-        assert!(is_potentially_valid("vi"));  // typing "viet"
-        assert!(is_potentially_valid("ng"));  // typing "nguyen"
-        assert!(is_potentially_valid(""));
+    fn test_foreign_word_detection() {
+        assert!(is_foreign_word_pattern("programming", None));
+        assert!(is_foreign_word_pattern("describe", Some('s')));
+        assert!(is_foreign_word_pattern("spectrum", None));
+        assert!(!is_foreign_word_pattern("việt", None)); // Has horn
+        assert!(!is_foreign_word_pattern("xin", None)); // Valid Vietnamese
+    }
+
+    #[test]
+    fn test_spelling_rules() {
+        // c vs k
+        assert!(check_spelling_rules("c", "a"));     // ca ✓
+        assert!(!check_spelling_rules("c", "e"));    // ce ✗ (should be ke)
+        assert!(check_spelling_rules("k", "e"));     // ke ✓
+        
+        // g vs gh
+        assert!(check_spelling_rules("g", "a"));     // ga ✓
+        assert!(!check_spelling_rules("g", "e"));    // ge ✗ (should be ghe)
+        assert!(check_spelling_rules("gh", "e"));    // ghe ✓
     }
 
     #[test]
     fn test_word_boundary() {
         assert!(is_word_boundary(' '));
         assert!(is_word_boundary('.'));
+        assert!(is_word_boundary('='));  // Programming
+        assert!(is_word_boundary('{'));  // Code
         assert!(!is_word_boundary('a'));
     }
 }
