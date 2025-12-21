@@ -211,6 +211,21 @@ Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for more informa
 
 ---
 
+## ☕ Support
+
+Nếu bạn thấy dự án này hữu ích, hãy ủng hộ tác giả:
+
+<p align="center">
+  <a href="https://buymeacoffee.com/thanhnguyxn">
+    <img src="https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me A Coffee"/>
+  </a>
+  <a href="https://github.com/sponsors/ThanhNguyxn">
+    <img src="https://img.shields.io/badge/GitHub_Sponsors-EA4AAA?style=for-the-badge&logo=github-sponsors&logoColor=white" alt="GitHub Sponsors"/>
+  </a>
+</p>
+
+---
+
 <p align="center">
   Made with ❤️ in Vietnam 🇻🇳
 </p>
