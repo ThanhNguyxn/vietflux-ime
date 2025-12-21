@@ -7,7 +7,7 @@
 //! - Tone repositioning (hoaf → hoà)
 //! - Double mark undo (ass → as)
 
-use crate::chars::{self, ToneMark, VowelMod, REVERSE_MAP};
+use crate::chars::{self, ToneMark, VowelMod, CHAR_MAP, REVERSE_MAP};
 
 /// Transform result with details
 #[derive(Debug, Clone, PartialEq)]

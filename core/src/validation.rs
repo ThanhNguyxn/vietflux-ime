@@ -3,7 +3,7 @@
 //! Validates if a string is a valid Vietnamese syllable.
 //! Based on Vietnamese phonology rules with Foreign Word Detection.
 
-use crate::chars::{self, REVERSE_MAP};
+use crate::chars::{self, VowelMod, REVERSE_MAP};
 
 // ============================================================
 // PHONOLOGY CONSTANTS
