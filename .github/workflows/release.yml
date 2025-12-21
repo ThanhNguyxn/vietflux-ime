@@ -52,7 +52,7 @@ jobs:
           zip -r "VietFlux-${VERSION}-macOS.zip" VietFlux-macOS
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: macos-build
           path: dist/*.zip
@@ -93,7 +93,7 @@ jobs:
         shell: pwsh
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: windows-build
           path: dist/*.zip
@@ -134,7 +134,7 @@ jobs:
           tar -czvf "VietFlux-${VERSION}-Linux.tar.gz" VietFlux-Linux
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: linux-build
           path: dist/*.tar.gz
