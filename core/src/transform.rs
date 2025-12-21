@@ -31,7 +31,7 @@ impl TransformResult {
             was_undo: false,
         }
     }
-    
+
     pub fn undo(position: usize) -> Self {
         Self {
             success: true,
@@ -40,7 +40,7 @@ impl TransformResult {
             was_undo: true,
         }
     }
-    
+
     pub fn none() -> Self {
         Self {
             success: false,
@@ -64,7 +64,7 @@ pub fn apply_modifier(ch: char, modifier: VowelMod) -> Option<char> {
 /// Remove all diacritics from a character
 pub fn remove_diacritics(ch: char) -> char {
     let lower = ch.to_ascii_lowercase();
-    
+
     if let Some(&(base, _, _)) = REVERSE_MAP.get(&lower) {
         if ch.is_uppercase() {
             base.to_ascii_uppercase()
@@ -128,7 +128,7 @@ pub fn has_modifier(ch: char) -> bool {
 
 /// Find the best vowel position for tone placement
 /// Based on Vietnamese linguistic rules:
-/// 
+///
 /// Rules (in order of priority):
 /// 1. If word contains ơ, ư, ă, â, ê, ô → put tone there
 /// 2. For ươ compound: put tone on ơ (second vowel)
@@ -141,24 +141,25 @@ pub fn find_tone_position(chars: &[char], vowel_indices: &[usize]) -> Option<usi
     if vowel_indices.is_empty() {
         return None;
     }
-    
+
     // Special case: ươ compound - tone goes on ơ
     if vowel_indices.len() >= 2 {
         for i in 0..vowel_indices.len() - 1 {
             let first_idx = vowel_indices[i];
             let second_idx = vowel_indices[i + 1];
-            
+
             let first = chars[first_idx].to_ascii_lowercase();
             let second = chars[second_idx].to_ascii_lowercase();
-            
+
             let first_base = chars::get_base(first);
             let second_base = chars::get_base(second);
             let first_mod = get_modifier(chars[first_idx]);
             let second_mod = get_modifier(chars[second_idx]);
-            
+
             // ươ compound: tone goes on ơ
-            if (first_base == 'u' && first_mod == VowelMod::Horn) ||
-               (second_base == 'o' && second_mod == VowelMod::Horn) {
+            if (first_base == 'u' && first_mod == VowelMod::Horn)
+                || (second_base == 'o' && second_mod == VowelMod::Horn)
+            {
                 // If we have ư + ơ, tone on ơ
                 if first_base == 'u' && second_base == 'o' {
                     return Some(second_idx);
@@ -166,45 +167,50 @@ pub fn find_tone_position(chars: &[char], vowel_indices: &[usize]) -> Option<usi
             }
         }
     }
-    
+
     // Rule 1: Check for modified vowels first (ơ, ư, ă, â, ê, ô)
     for &idx in vowel_indices {
         if get_modifier(chars[idx]) != VowelMod::None {
             return Some(idx);
         }
     }
-    
+
     match vowel_indices.len() {
         // Rule 3: Single vowel
         1 => Some(vowel_indices[0]),
-        
+
         // Rule 4: Two vowels
         2 => {
             let first = chars[vowel_indices[0]].to_ascii_lowercase();
             let second = chars[vowel_indices[1]].to_ascii_lowercase();
-            
+
             let first_base = chars::get_base(first);
             let second_base = chars::get_base(second);
-            
+
             // Special pairs where tone goes on first vowel
             let first_tone_pairs = [
-                ('i', 'a'), ('i', 'ê'), // ia, iê
-                ('u', 'a'), ('u', 'ô'), ('u', 'ơ'), // ua, uô, uơ
-                ('ư', 'a'), ('ư', 'ơ'), // ưa, ươ  
-                ('o', 'a'), ('o', 'e'), // oa, oe
+                ('i', 'a'),
+                ('i', 'ê'), // ia, iê
+                ('u', 'a'),
+                ('u', 'ô'),
+                ('u', 'ơ'), // ua, uô, uơ
+                ('ư', 'a'),
+                ('ư', 'ơ'), // ưa, ươ
+                ('o', 'a'),
+                ('o', 'e'), // oa, oe
             ];
-            
+
             // Check if this is a "first vowel" pair
             for (f, s) in first_tone_pairs {
                 if first_base == f && second_base == s {
                     return Some(vowel_indices[0]);
                 }
             }
-            
+
             // Default: tone on second (last) vowel
             Some(vowel_indices[1])
         }
-        
+
         // Rule 5: Three or more vowels - middle one
         _ => Some(vowel_indices[vowel_indices.len() / 2]),
     }
@@ -231,19 +237,19 @@ pub fn apply_uo_compound(chars: &mut [char], start_idx: usize) -> TransformResul
     if start_idx + 1 >= chars.len() {
         return TransformResult::none();
     }
-    
+
     let first = chars[start_idx].to_ascii_lowercase();
     let second = chars[start_idx + 1].to_ascii_lowercase();
-    
+
     let first_base = chars::get_base(first);
     let second_base = chars::get_base(second);
-    
+
     // Check for "uo" pattern
     if first_base == 'u' && second_base == 'o' {
         // Get current tones
         let first_tone = get_tone(chars[start_idx]);
         let second_tone = get_tone(chars[start_idx + 1]);
-        
+
         // Apply horn to both
         if let Some(new_first) = apply_modifier_with_tone('u', VowelMod::Horn, first_tone) {
             if let Some(new_second) = apply_modifier_with_tone('o', VowelMod::Horn, second_tone) {
@@ -258,12 +264,12 @@ pub fn apply_uo_compound(chars: &mut [char], start_idx: usize) -> TransformResul
                 } else {
                     new_second
                 };
-                
+
                 return TransformResult::success(start_idx, 2);
             }
         }
     }
-    
+
     TransformResult::none()
 }
 
@@ -294,7 +300,7 @@ pub fn remove_tone(ch: char) -> (char, bool) {
     if current_tone == ToneMark::None {
         return (ch, false);
     }
-    
+
     if let Some(without_tone) = apply_tone(chars::get_base(ch), ToneMark::None) {
         // Preserve modifier if any
         let modifier = get_modifier(ch);
@@ -308,7 +314,7 @@ pub fn remove_tone(ch: char) -> (char, bool) {
                 return (result, true);
             }
         }
-        
+
         let result = if ch.is_uppercase() {
             without_tone.to_ascii_uppercase()
         } else {
@@ -316,7 +322,7 @@ pub fn remove_tone(ch: char) -> (char, bool) {
         };
         return (result, true);
     }
-    
+
     (ch, false)
 }
 
@@ -326,10 +332,10 @@ pub fn remove_modifier(ch: char) -> (char, bool) {
     if current_mod == VowelMod::None {
         return (ch, false);
     }
-    
+
     let base = chars::get_base(ch);
     let tone = get_tone(ch);
-    
+
     if let Some(without_mod) = CHAR_MAP.get(&(base, VowelMod::None, tone)).copied() {
         let result = if ch.is_uppercase() {
             without_mod.to_ascii_uppercase()
@@ -338,7 +344,7 @@ pub fn remove_modifier(ch: char) -> (char, bool) {
         };
         return (result, true);
     }
-    
+
     (ch, false)
 }
 
@@ -357,7 +363,7 @@ pub fn find_modifier_position(chars: &[char], modifier: VowelMod) -> Option<usiz
         VowelMod::Breve => &['a'],
         VowelMod::None => return None,
     };
-    
+
     // Find last matching vowel (right to left)
     for i in (0..chars.len()).rev() {
         let c = chars[i].to_ascii_lowercase();
@@ -366,7 +372,7 @@ pub fn find_modifier_position(chars: &[char], modifier: VowelMod) -> Option<usiz
             return Some(i);
         }
     }
-    
+
     None
 }
 
@@ -414,7 +420,7 @@ mod tests {
         let vowels = find_vowel_indices(&chars);
         assert_eq!(find_tone_position(&chars, &vowels), Some(1));
     }
-    
+
     #[test]
     fn test_tone_position_two() {
         // "tien" - tone on 'e' (second vowel)
@@ -422,7 +428,7 @@ mod tests {
         let vowels = find_vowel_indices(&chars);
         assert_eq!(find_tone_position(&chars, &vowels), Some(2));
     }
-    
+
     #[test]
     fn test_tone_position_three() {
         // "uyen" - tone on 'y' (middle)
@@ -437,7 +443,7 @@ mod tests {
         assert!(!should_undo_tone('á', ToneMark::Grave));
         assert!(!should_undo_tone('a', ToneMark::Acute));
     }
-    
+
     #[test]
     fn test_uo_compound() {
         let mut chars: Vec<char> = "duoc".chars().collect();

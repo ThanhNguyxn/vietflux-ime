@@ -35,7 +35,7 @@ impl ShortcutTable {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Add a shortcut
     pub fn add(&mut self, trigger: impl Into<String>, expansion: impl Into<String>) {
         let shortcut = Shortcut::new(trigger, expansion);
@@ -47,29 +47,23 @@ impl ShortcutTable {
         }
         self.all.push(shortcut);
     }
-    
+
     /// Add multiple shortcuts
     pub fn add_all(&mut self, shortcuts: impl IntoIterator<Item = (String, String)>) {
         for (trigger, expansion) in shortcuts {
             self.add(trigger, expansion);
         }
     }
-    
+
     /// Find longest matching shortcut for the given buffer
     /// Uses longest-match-first strategy
     pub fn find_match(&self, buffer: &str) -> Option<&Shortcut> {
         let lower = buffer.to_lowercase();
-        
-        // Get first char for indexed lookup
-        let first_char = lower.chars().next()?;
-        
-        // Get candidates starting with this char
-        let candidates = self.shortcuts.get(&first_char)?;
-        
+
         // Find longest match
         let mut best_match: Option<&Shortcut> = None;
-        
-        for shortcut in candidates {
+
+        for shortcut in &self.all {
             if lower.ends_with(&shortcut.trigger.to_lowercase()) {
                 match &best_match {
                     Some(current) if current.trigger.len() >= shortcut.trigger.len() => {}
@@ -77,35 +71,35 @@ impl ShortcutTable {
                 }
             }
         }
-        
+
         best_match
     }
-    
+
     /// Check if buffer could potentially match a shortcut
     pub fn has_potential_match(&self, buffer: &str) -> bool {
         let lower = buffer.to_lowercase();
-        
+
         for shortcut in &self.all {
             let trigger = shortcut.trigger.to_lowercase();
             if trigger.starts_with(&lower) {
                 return true;
             }
         }
-        
+
         false
     }
-    
+
     /// Clear all shortcuts
     pub fn clear(&mut self) {
         self.shortcuts.clear();
         self.all.clear();
     }
-    
+
     /// Get number of shortcuts
     pub fn len(&self) -> usize {
         self.all.len()
     }
-    
+
     /// Check if empty
     pub fn is_empty(&self) -> bool {
         self.all.is_empty()
@@ -115,7 +109,7 @@ impl ShortcutTable {
 /// Default Vietnamese shortcuts commonly used
 pub fn default_shortcuts() -> ShortcutTable {
     let mut table = ShortcutTable::new();
-    
+
     // Common abbreviations
     table.add("ko", "không");
     table.add("dc", "được");
@@ -130,7 +124,7 @@ pub fn default_shortcuts() -> ShortcutTable {
     table.add("vk", "vợ");
     table.add("nyc", "người yêu cũ");
     table.add("ny", "người yêu");
-    
+
     table
 }
 
@@ -143,7 +137,7 @@ mod tests {
         let mut table = ShortcutTable::new();
         table.add("ko", "không");
         table.add("dc", "được");
-        
+
         let result = table.find_match("ko");
         assert!(result.is_some());
         assert_eq!(result.unwrap().expansion, "không");
@@ -155,7 +149,7 @@ mod tests {
         table.add("n", "này");
         table.add("ng", "người");
         table.add("ngu", "ngủ");
-        
+
         // Should match longest
         let result = table.find_match("xyzng");
         assert!(result.is_some());

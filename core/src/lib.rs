@@ -12,14 +12,14 @@
 //! # Usage (JavaScript/WASM)
 //! ```javascript
 //! import init, { VietFlux } from 'vietflux-core';
-//! 
+//!
 //! await init();
 //! const ime = new VietFlux();
 //! ime.set_method('telex');
-//! 
+//!
 //! const result = ime.process_key('a');
 //! console.log(result.output); // 'a'
-//! 
+//!
 //! const result2 = ime.process_key('a');
 //! console.log(result2.output); // 'â' (aa -> â in Telex)
 //! ```
@@ -32,8 +32,8 @@ pub mod shortcuts;
 pub mod transform;
 pub mod validation;
 
-use wasm_bindgen::prelude::*;
 use engine::Engine;
+use wasm_bindgen::prelude::*;
 
 /// Main VietFlux IME instance exposed to JavaScript
 #[wasm_bindgen]

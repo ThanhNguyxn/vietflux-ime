@@ -16,18 +16,18 @@ impl InputMethod for Telex {
     fn name(&self) -> &'static str {
         "telex"
     }
-    
+
     fn process(&self, key: char, prev_char: Option<char>) -> KeyAction {
         let key_lower = key.to_ascii_lowercase();
-        
+
         match key_lower {
             // Tone marks
-            's' => KeyAction::Tone(ToneMark::Acute),   // sắc
-            'f' => KeyAction::Tone(ToneMark::Grave),   // huyền
-            'r' => KeyAction::Tone(ToneMark::Hook),    // hỏi
-            'x' => KeyAction::Tone(ToneMark::Tilde),   // ngã
-            'j' => KeyAction::Tone(ToneMark::Dot),     // nặng
-            
+            's' => KeyAction::Tone(ToneMark::Acute), // sắc
+            'f' => KeyAction::Tone(ToneMark::Grave), // huyền
+            'r' => KeyAction::Tone(ToneMark::Hook),  // hỏi
+            'x' => KeyAction::Tone(ToneMark::Tilde), // ngã
+            'j' => KeyAction::Tone(ToneMark::Dot),   // nặng
+
             // Vowel modifiers (double key = circumflex)
             'a' | 'e' | 'o' => {
                 if let Some(prev) = prev_char {
@@ -37,12 +37,12 @@ impl InputMethod for Telex {
                 }
                 KeyAction::None
             }
-            
+
             // w = horn (ơ, ư) or breve (ă)
             'w' => {
                 if let Some(prev) = prev_char {
                     match prev.to_ascii_lowercase() {
-                        'a' => KeyAction::Modifier(VowelMod::Breve),  // aw = ă
+                        'a' => KeyAction::Modifier(VowelMod::Breve), // aw = ă
                         'o' | 'u' => KeyAction::Modifier(VowelMod::Horn), // ow=ơ, uw=ư
                         _ => KeyAction::None,
                     }
@@ -50,29 +50,26 @@ impl InputMethod for Telex {
                     KeyAction::None
                 }
             }
-            
+
             // dd = đ
             'd' => {
                 if let Some(prev) = prev_char {
-                    if prev.to_ascii_lowercase() == 'd' {
+                    if prev.eq_ignore_ascii_case(&'d') {
                         return KeyAction::Stroke;
                     }
                 }
                 KeyAction::None
             }
-            
+
             // z = remove diacritics
             'z' => KeyAction::RemoveDiacritics,
-            
+
             _ => KeyAction::None,
         }
     }
-    
+
     fn is_modifier_key(&self, key: char) -> bool {
-        matches!(
-            key.to_ascii_lowercase(),
-            's' | 'f' | 'r' | 'x' | 'j' | 'z'
-        )
+        matches!(key.to_ascii_lowercase(), 's' | 'f' | 'r' | 'x' | 'j' | 'z')
     }
 }
 
@@ -93,17 +90,35 @@ mod tests {
     #[test]
     fn test_telex_circumflex() {
         let telex = Telex;
-        assert_eq!(telex.process('a', Some('a')), KeyAction::Modifier(VowelMod::Circumflex));
-        assert_eq!(telex.process('e', Some('e')), KeyAction::Modifier(VowelMod::Circumflex));
-        assert_eq!(telex.process('o', Some('o')), KeyAction::Modifier(VowelMod::Circumflex));
+        assert_eq!(
+            telex.process('a', Some('a')),
+            KeyAction::Modifier(VowelMod::Circumflex)
+        );
+        assert_eq!(
+            telex.process('e', Some('e')),
+            KeyAction::Modifier(VowelMod::Circumflex)
+        );
+        assert_eq!(
+            telex.process('o', Some('o')),
+            KeyAction::Modifier(VowelMod::Circumflex)
+        );
     }
 
     #[test]
     fn test_telex_horn_breve() {
         let telex = Telex;
-        assert_eq!(telex.process('w', Some('a')), KeyAction::Modifier(VowelMod::Breve));
-        assert_eq!(telex.process('w', Some('o')), KeyAction::Modifier(VowelMod::Horn));
-        assert_eq!(telex.process('w', Some('u')), KeyAction::Modifier(VowelMod::Horn));
+        assert_eq!(
+            telex.process('w', Some('a')),
+            KeyAction::Modifier(VowelMod::Breve)
+        );
+        assert_eq!(
+            telex.process('w', Some('o')),
+            KeyAction::Modifier(VowelMod::Horn)
+        );
+        assert_eq!(
+            telex.process('w', Some('u')),
+            KeyAction::Modifier(VowelMod::Horn)
+        );
     }
 
     #[test]

@@ -17,12 +17,12 @@ pub const CONSONANTS: &[char] = &[
 /// Tone marks (dấu)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ToneMark {
-    None,   // không dấu
-    Acute,  // sắc (á)
-    Grave,  // huyền (à)
-    Hook,   // hỏi (ả)
-    Tilde,  // ngã (ã)
-    Dot,    // nặng (ạ)
+    None,  // không dấu
+    Acute, // sắc (á)
+    Grave, // huyền (à)
+    Hook,  // hỏi (ả)
+    Tilde, // ngã (ã)
+    Dot,   // nặng (ạ)
 }
 
 /// Vowel modifiers (mũ/móc)
@@ -37,7 +37,7 @@ pub enum VowelMod {
 /// Complete Vietnamese character with all components
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct VietChar {
-    pub base: char,      // Base vowel (a, e, i, o, u, y)
+    pub base: char, // Base vowel (a, e, i, o, u, y)
     pub modifier: VowelMod,
     pub tone: ToneMark,
 }
@@ -45,7 +45,7 @@ pub struct VietChar {
 /// Mapping from base vowel + modifier + tone to final character
 pub static CHAR_MAP: LazyLock<HashMap<(char, VowelMod, ToneMark), char>> = LazyLock::new(|| {
     let mut map = HashMap::new();
-    
+
     // A variants
     map.insert(('a', VowelMod::None, ToneMark::None), 'a');
     map.insert(('a', VowelMod::None, ToneMark::Acute), 'á');
@@ -53,21 +53,21 @@ pub static CHAR_MAP: LazyLock<HashMap<(char, VowelMod, ToneMark), char>> = LazyL
     map.insert(('a', VowelMod::None, ToneMark::Hook), 'ả');
     map.insert(('a', VowelMod::None, ToneMark::Tilde), 'ã');
     map.insert(('a', VowelMod::None, ToneMark::Dot), 'ạ');
-    
+
     map.insert(('a', VowelMod::Circumflex, ToneMark::None), 'â');
     map.insert(('a', VowelMod::Circumflex, ToneMark::Acute), 'ấ');
     map.insert(('a', VowelMod::Circumflex, ToneMark::Grave), 'ầ');
     map.insert(('a', VowelMod::Circumflex, ToneMark::Hook), 'ẩ');
     map.insert(('a', VowelMod::Circumflex, ToneMark::Tilde), 'ẫ');
     map.insert(('a', VowelMod::Circumflex, ToneMark::Dot), 'ậ');
-    
+
     map.insert(('a', VowelMod::Breve, ToneMark::None), 'ă');
     map.insert(('a', VowelMod::Breve, ToneMark::Acute), 'ắ');
     map.insert(('a', VowelMod::Breve, ToneMark::Grave), 'ằ');
     map.insert(('a', VowelMod::Breve, ToneMark::Hook), 'ẳ');
     map.insert(('a', VowelMod::Breve, ToneMark::Tilde), 'ẵ');
     map.insert(('a', VowelMod::Breve, ToneMark::Dot), 'ặ');
-    
+
     // E variants
     map.insert(('e', VowelMod::None, ToneMark::None), 'e');
     map.insert(('e', VowelMod::None, ToneMark::Acute), 'é');
@@ -75,14 +75,14 @@ pub static CHAR_MAP: LazyLock<HashMap<(char, VowelMod, ToneMark), char>> = LazyL
     map.insert(('e', VowelMod::None, ToneMark::Hook), 'ẻ');
     map.insert(('e', VowelMod::None, ToneMark::Tilde), 'ẽ');
     map.insert(('e', VowelMod::None, ToneMark::Dot), 'ẹ');
-    
+
     map.insert(('e', VowelMod::Circumflex, ToneMark::None), 'ê');
     map.insert(('e', VowelMod::Circumflex, ToneMark::Acute), 'ế');
     map.insert(('e', VowelMod::Circumflex, ToneMark::Grave), 'ề');
     map.insert(('e', VowelMod::Circumflex, ToneMark::Hook), 'ể');
     map.insert(('e', VowelMod::Circumflex, ToneMark::Tilde), 'ễ');
     map.insert(('e', VowelMod::Circumflex, ToneMark::Dot), 'ệ');
-    
+
     // I variants
     map.insert(('i', VowelMod::None, ToneMark::None), 'i');
     map.insert(('i', VowelMod::None, ToneMark::Acute), 'í');
@@ -90,7 +90,7 @@ pub static CHAR_MAP: LazyLock<HashMap<(char, VowelMod, ToneMark), char>> = LazyL
     map.insert(('i', VowelMod::None, ToneMark::Hook), 'ỉ');
     map.insert(('i', VowelMod::None, ToneMark::Tilde), 'ĩ');
     map.insert(('i', VowelMod::None, ToneMark::Dot), 'ị');
-    
+
     // O variants
     map.insert(('o', VowelMod::None, ToneMark::None), 'o');
     map.insert(('o', VowelMod::None, ToneMark::Acute), 'ó');
@@ -98,21 +98,21 @@ pub static CHAR_MAP: LazyLock<HashMap<(char, VowelMod, ToneMark), char>> = LazyL
     map.insert(('o', VowelMod::None, ToneMark::Hook), 'ỏ');
     map.insert(('o', VowelMod::None, ToneMark::Tilde), 'õ');
     map.insert(('o', VowelMod::None, ToneMark::Dot), 'ọ');
-    
+
     map.insert(('o', VowelMod::Circumflex, ToneMark::None), 'ô');
     map.insert(('o', VowelMod::Circumflex, ToneMark::Acute), 'ố');
     map.insert(('o', VowelMod::Circumflex, ToneMark::Grave), 'ồ');
     map.insert(('o', VowelMod::Circumflex, ToneMark::Hook), 'ổ');
     map.insert(('o', VowelMod::Circumflex, ToneMark::Tilde), 'ỗ');
     map.insert(('o', VowelMod::Circumflex, ToneMark::Dot), 'ộ');
-    
+
     map.insert(('o', VowelMod::Horn, ToneMark::None), 'ơ');
     map.insert(('o', VowelMod::Horn, ToneMark::Acute), 'ớ');
     map.insert(('o', VowelMod::Horn, ToneMark::Grave), 'ờ');
     map.insert(('o', VowelMod::Horn, ToneMark::Hook), 'ở');
     map.insert(('o', VowelMod::Horn, ToneMark::Tilde), 'ỡ');
     map.insert(('o', VowelMod::Horn, ToneMark::Dot), 'ợ');
-    
+
     // U variants
     map.insert(('u', VowelMod::None, ToneMark::None), 'u');
     map.insert(('u', VowelMod::None, ToneMark::Acute), 'ú');
@@ -120,14 +120,14 @@ pub static CHAR_MAP: LazyLock<HashMap<(char, VowelMod, ToneMark), char>> = LazyL
     map.insert(('u', VowelMod::None, ToneMark::Hook), 'ủ');
     map.insert(('u', VowelMod::None, ToneMark::Tilde), 'ũ');
     map.insert(('u', VowelMod::None, ToneMark::Dot), 'ụ');
-    
+
     map.insert(('u', VowelMod::Horn, ToneMark::None), 'ư');
     map.insert(('u', VowelMod::Horn, ToneMark::Acute), 'ứ');
     map.insert(('u', VowelMod::Horn, ToneMark::Grave), 'ừ');
     map.insert(('u', VowelMod::Horn, ToneMark::Hook), 'ử');
     map.insert(('u', VowelMod::Horn, ToneMark::Tilde), 'ữ');
     map.insert(('u', VowelMod::Horn, ToneMark::Dot), 'ự');
-    
+
     // Y variants
     map.insert(('y', VowelMod::None, ToneMark::None), 'y');
     map.insert(('y', VowelMod::None, ToneMark::Acute), 'ý');
@@ -135,14 +135,13 @@ pub static CHAR_MAP: LazyLock<HashMap<(char, VowelMod, ToneMark), char>> = LazyL
     map.insert(('y', VowelMod::None, ToneMark::Hook), 'ỷ');
     map.insert(('y', VowelMod::None, ToneMark::Tilde), 'ỹ');
     map.insert(('y', VowelMod::None, ToneMark::Dot), 'ỵ');
-    
+
     map
 });
 
 /// Reverse mapping from Vietnamese char to components
-pub static REVERSE_MAP: LazyLock<HashMap<char, (char, VowelMod, ToneMark)>> = LazyLock::new(|| {
-    CHAR_MAP.iter().map(|(&k, &v)| (v, k)).collect()
-});
+pub static REVERSE_MAP: LazyLock<HashMap<char, (char, VowelMod, ToneMark)>> =
+    LazyLock::new(|| CHAR_MAP.iter().map(|(&k, &v)| (v, k)).collect());
 
 /// Check if a character is a vowel (including modified forms)
 pub fn is_vowel(c: char) -> bool {
@@ -171,12 +170,15 @@ pub fn get_base(c: char) -> char {
 /// Get character with new tone mark
 pub fn with_tone(c: char, tone: ToneMark) -> Option<char> {
     let lower = c.to_ascii_lowercase();
-    let (base, modifier, _) = REVERSE_MAP.get(&lower).copied()
-        .unwrap_or((lower, VowelMod::None, ToneMark::None));
-    
+    let (base, modifier, _) =
+        REVERSE_MAP
+            .get(&lower)
+            .copied()
+            .unwrap_or((lower, VowelMod::None, ToneMark::None));
+
     CHAR_MAP.get(&(base, modifier, tone)).map(|&result| {
         if c.is_uppercase() {
-            result.to_ascii_uppercase()
+            result.to_uppercase().next().unwrap_or(result)
         } else {
             result
         }
@@ -186,9 +188,12 @@ pub fn with_tone(c: char, tone: ToneMark) -> Option<char> {
 /// Get character with new vowel modifier
 pub fn with_modifier(c: char, modifier: VowelMod) -> Option<char> {
     let lower = c.to_ascii_lowercase();
-    let (base, _, tone) = REVERSE_MAP.get(&lower).copied()
-        .unwrap_or((lower, VowelMod::None, ToneMark::None));
-    
+    let (base, _, tone) =
+        REVERSE_MAP
+            .get(&lower)
+            .copied()
+            .unwrap_or((lower, VowelMod::None, ToneMark::None));
+
     CHAR_MAP.get(&(base, modifier, tone)).map(|&result| {
         if c.is_uppercase() {
             result.to_ascii_uppercase()

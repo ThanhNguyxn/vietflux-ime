@@ -9,13 +9,13 @@
 //! - Double mark undo
 //! - Shortcut expansion
 
-use serde::{Deserialize, Serialize};
 use crate::buffer::Buffer;
 use crate::chars::{self, ToneMark, VowelMod};
 use crate::methods::{self, InputMethod, KeyAction};
-use crate::shortcuts::{ShortcutTable, default_shortcuts};
+use crate::shortcuts::{default_shortcuts, ShortcutTable};
 use crate::transform;
 use crate::validation::{self, ValidationResult};
+use serde::{Deserialize, Serialize};
 
 /// Engine action result
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -71,7 +71,7 @@ impl ProcessResult {
             restored: false,
         }
     }
-    
+
     pub fn restore(raw_text: String, backspace: usize) -> Self {
         Self {
             action: Action::Restore,
@@ -88,6 +88,7 @@ struct LastTransform {
     /// Position of last transform
     position: Option<usize>,
     /// Type of transform
+    #[allow(dead_code)]
     transform_type: TransformType,
     /// Original character before transform
     original: Option<char>,
@@ -169,21 +170,19 @@ impl Engine {
 
         // Get previous character for context
         let prev_char = self.buffer.last().map(|bc| bc.ch);
-        
+
         // Check for foreign word pattern BEFORE processing
         let current_text = self.buffer.get_text();
         if validation::is_foreign_word_pattern(&current_text, Some(key)) {
             self.possible_foreign = true;
         }
-        
+
         // Process through input method
         let action = self.method.process(key, prev_char);
-        
+
         match action {
-            KeyAction::None => {
-                self.handle_regular_char(key)
-            }
-            
+            KeyAction::None => self.handle_regular_char(key),
+
             KeyAction::Tone(tone) => {
                 // Skip if foreign word
                 if self.possible_foreign {
@@ -191,25 +190,19 @@ impl Engine {
                 }
                 self.apply_tone(tone, key)
             }
-            
+
             KeyAction::Modifier(modifier) => {
                 if self.possible_foreign {
                     return self.handle_regular_char(key);
                 }
                 self.apply_modifier(modifier, key)
             }
-            
-            KeyAction::Stroke => {
-                self.apply_stroke()
-            }
-            
-            KeyAction::RemoveDiacritics => {
-                self.remove_all_diacritics()
-            }
-            
-            KeyAction::Undo => {
-                self.undo_last_transform()
-            }
+
+            KeyAction::Stroke => self.apply_stroke(),
+
+            KeyAction::RemoveDiacritics => self.remove_all_diacritics(),
+
+            KeyAction::Undo => self.undo_last_transform(),
         }
     }
 
@@ -217,26 +210,29 @@ impl Engine {
     fn handle_regular_char(&mut self, key: char) -> ProcessResult {
         self.buffer.push_simple(key);
         self.last_transform = LastTransform::default();
-        
+
         // Check for shortcut match
         if let Some(shortcut) = self.shortcuts.find_match(&self.buffer.get_text()) {
             let expansion = shortcut.expansion.clone();
             let trigger_len = shortcut.trigger.len();
-            
+
             // Remove trigger chars and replace with expansion
             for _ in 0..trigger_len {
                 self.buffer.pop();
             }
-            
+
             // Add expansion chars
             for ch in expansion.chars() {
                 self.buffer.push_simple(ch);
             }
-            
+
             let text = self.buffer.get_text();
-            return ProcessResult::update(text, self.buffer.len() + trigger_len - expansion.chars().count());
+            return ProcessResult::update(
+                text,
+                self.buffer.len() + trigger_len - expansion.chars().count(),
+            );
         }
-        
+
         let text = self.buffer.get_text();
         ProcessResult::update(text, self.buffer.len() - 1)
     }
@@ -246,39 +242,39 @@ impl Engine {
         if self.buffer.is_empty() {
             return ProcessResult::passthrough();
         }
-        
+
         let transformed = self.buffer.get_text();
         let raw = self.buffer.get_raw();
-        
+
         // Validate the transformed text
         let validation = validation::validate(&transformed);
-        
+
         // If invalid Vietnamese AND looks foreign, restore to raw ASCII
         if !validation.is_valid() {
             let should_restore = matches!(
-                validation, 
-                ValidationResult::ForeignWord | 
-                ValidationResult::InvalidVowelPattern |
-                ValidationResult::InvalidSpelling
+                validation,
+                ValidationResult::ForeignWord
+                    | ValidationResult::InvalidVowelPattern
+                    | ValidationResult::InvalidSpelling
             );
-            
+
             if should_restore && transformed != raw {
                 // Restore to raw ASCII
                 let backspace_count = transformed.chars().count();
                 let output = format!("{}{}", raw, boundary_char);
-                
+
                 self.buffer.clear();
                 self.reset_state();
-                
+
                 return ProcessResult::restore(output, backspace_count);
             }
         }
-        
+
         // Valid or acceptable - commit as-is
         let text = format!("{}{}", transformed, boundary_char);
         self.buffer.clear();
         self.reset_state();
-        
+
         ProcessResult::commit(text)
     }
 
@@ -286,7 +282,7 @@ impl Engine {
     fn apply_tone(&mut self, tone: ToneMark, raw_key: char) -> ProcessResult {
         let chars: Vec<char> = self.buffer.iter().map(|bc| bc.ch).collect();
         let vowel_indices = transform::find_vowel_indices(&chars);
-        
+
         // Check for double-mark undo
         if let Some(&last_idx) = vowel_indices.last() {
             if transform::should_undo_tone(chars[last_idx], tone) {
@@ -294,35 +290,35 @@ impl Engine {
                 let (without_tone, _) = transform::remove_tone(chars[last_idx]);
                 self.buffer.replace(last_idx, without_tone);
                 self.buffer.push_simple(raw_key);
-                
+
                 self.last_transform = LastTransform {
                     position: Some(last_idx),
                     transform_type: TransformType::None,
                     original: None,
                 };
-                
+
                 let text = self.buffer.get_text();
                 return ProcessResult::update(text, self.buffer.len());
             }
         }
-        
+
         // Find best position for tone
         if let Some(pos) = transform::find_tone_position(&chars, &vowel_indices) {
             let old_char = chars[pos];
             if let Some(new_char) = transform::apply_tone(old_char, tone) {
                 self.buffer.replace(pos, new_char);
-                
+
                 self.last_transform = LastTransform {
                     position: Some(pos),
                     transform_type: TransformType::Tone(tone),
                     original: Some(old_char),
                 };
-                
+
                 let text = self.buffer.get_text();
                 return ProcessResult::update(text, self.buffer.len());
             }
         }
-        
+
         // No valid vowel found - treat as regular character
         self.handle_regular_char(raw_key)
     }
@@ -330,7 +326,7 @@ impl Engine {
     /// Apply vowel modifier with UO compound handling
     fn apply_modifier(&mut self, modifier: VowelMod, raw_key: char) -> ProcessResult {
         let mut chars: Vec<char> = self.buffer.iter().map(|bc| bc.ch).collect();
-        
+
         // Check for UO compound first (uo → ươ)
         if modifier == VowelMod::Horn {
             if let Some(pos) = self.find_uo_compound(&chars) {
@@ -339,47 +335,47 @@ impl Engine {
                     // Update buffer with transformed chars
                     self.buffer.replace(pos, chars[pos]);
                     self.buffer.replace(pos + 1, chars[pos + 1]);
-                    
+
                     self.last_transform = LastTransform {
                         position: Some(pos),
                         transform_type: TransformType::Modifier(modifier),
                         original: None,
                     };
-                    
+
                     let text = self.buffer.get_text();
                     return ProcessResult::update(text, self.buffer.len());
                 }
             }
         }
-        
+
         // Find position for modifier
         if let Some(pos) = transform::find_modifier_position(&chars, modifier) {
             let old_char = chars[pos];
-            
+
             // Check for double-mark undo
             if transform::should_undo_modifier(old_char, modifier) {
                 let (without_mod, _) = transform::remove_modifier(old_char);
                 self.buffer.replace(pos, without_mod);
                 self.buffer.push_simple(raw_key);
-                
+
                 let text = self.buffer.get_text();
                 return ProcessResult::update(text, self.buffer.len());
             }
-            
+
             if let Some(new_char) = transform::apply_modifier(old_char, modifier) {
                 self.buffer.replace(pos, new_char);
-                
+
                 self.last_transform = LastTransform {
                     position: Some(pos),
                     transform_type: TransformType::Modifier(modifier),
                     original: Some(old_char),
                 };
-                
+
                 let text = self.buffer.get_text();
                 return ProcessResult::update(text, self.buffer.len());
             }
         }
-        
+
         // No valid vowel found - treat as regular character
         self.handle_regular_char(raw_key)
     }
@@ -389,7 +385,7 @@ impl Engine {
         for i in 0..chars.len().saturating_sub(1) {
             let first = chars::get_base(chars[i].to_ascii_lowercase());
             let second = chars::get_base(chars[i + 1].to_ascii_lowercase());
-            
+
             if first == 'u' && second == 'o' {
                 return Some(i);
             }
@@ -403,29 +399,29 @@ impl Engine {
         for i in (0..self.buffer.len()).rev() {
             if let Some(bc) = self.buffer.get(i) {
                 let ch = bc.ch;
-                if ch.to_ascii_lowercase() == 'd' || ch.to_ascii_lowercase() == 'đ' {
+                if ch.eq_ignore_ascii_case(&'d') || ch.eq_ignore_ascii_case(&'đ') {
                     let new_char = transform::toggle_stroke(ch);
                     self.buffer.replace(i, new_char);
-                    
+
                     self.last_transform = LastTransform {
                         position: Some(i),
                         transform_type: TransformType::Stroke,
                         original: Some(ch),
                     };
-                    
+
                     let text = self.buffer.get_text();
                     return ProcessResult::update(text, self.buffer.len());
                 }
             }
         }
-        
+
         ProcessResult::passthrough()
     }
 
     /// Remove all diacritics
     fn remove_all_diacritics(&mut self) -> ProcessResult {
         let mut changed = false;
-        
+
         for i in 0..self.buffer.len() {
             if let Some(bc) = self.buffer.get(i) {
                 let old = bc.ch;
@@ -436,7 +432,7 @@ impl Engine {
                 }
             }
         }
-        
+
         if changed {
             self.last_transform = LastTransform::default();
             let text = self.buffer.get_text();
@@ -448,16 +444,18 @@ impl Engine {
 
     /// Undo last transform
     fn undo_last_transform(&mut self) -> ProcessResult {
-        if let (Some(pos), Some(original)) = (self.last_transform.position, self.last_transform.original) {
+        if let (Some(pos), Some(original)) =
+            (self.last_transform.position, self.last_transform.original)
+        {
             if pos < self.buffer.len() {
                 self.buffer.replace(pos, original);
                 self.last_transform = LastTransform::default();
-                
+
                 let text = self.buffer.get_text();
                 return ProcessResult::update(text, self.buffer.len());
             }
         }
-        
+
         ProcessResult::passthrough()
     }
 
@@ -525,12 +523,12 @@ mod tests {
     fn test_telex_basic() {
         let mut engine = Engine::new();
         engine.set_method("telex");
-        
+
         engine.process_key('v', false);
         engine.process_key('i', false);
         engine.process_key('e', false);
         engine.process_key('t', false);
-        
+
         assert_eq!(engine.get_buffer(), "viet");
     }
 
@@ -538,10 +536,10 @@ mod tests {
     fn test_telex_tone() {
         let mut engine = Engine::new();
         engine.set_method("telex");
-        
+
         engine.process_key('a', false);
         engine.process_key('s', false);
-        
+
         assert_eq!(engine.get_buffer(), "á");
     }
 
@@ -549,10 +547,10 @@ mod tests {
     fn test_telex_circumflex() {
         let mut engine = Engine::new();
         engine.set_method("telex");
-        
+
         engine.process_key('a', false);
         engine.process_key('a', false);
-        
+
         assert_eq!(engine.get_buffer(), "â");
     }
 
@@ -560,11 +558,11 @@ mod tests {
     fn test_double_mark_undo() {
         let mut engine = Engine::new();
         engine.set_method("telex");
-        
+
         engine.process_key('a', false);
         engine.process_key('s', false); // á
         engine.process_key('s', false); // should become "as"
-        
+
         assert_eq!(engine.get_buffer(), "as");
     }
 
@@ -572,20 +570,20 @@ mod tests {
     fn test_vni_basic() {
         let mut engine = Engine::new();
         engine.set_method("vni");
-        
+
         engine.process_key('a', false);
         engine.process_key('1', false);
-        
+
         assert_eq!(engine.get_buffer(), "á");
     }
 
     #[test]
     fn test_shortcut_expansion() {
         let mut engine = Engine::new();
-        
+
         engine.process_key('k', false);
         engine.process_key('o', false);
-        
+
         // Should expand "ko" to "không"
         assert_eq!(engine.get_buffer(), "không");
     }

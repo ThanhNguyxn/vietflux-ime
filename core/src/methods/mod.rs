@@ -31,10 +31,10 @@ pub enum KeyAction {
 pub trait InputMethod: Send + Sync {
     /// Get method name
     fn name(&self) -> &'static str;
-    
+
     /// Process a key and return the action
     fn process(&self, key: char, prev_char: Option<char>) -> KeyAction;
-    
+
     /// Check if key is a modifier key (not a regular character)
     fn is_modifier_key(&self, key: char) -> bool;
 }
