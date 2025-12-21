@@ -69,8 +69,13 @@ jobs:
         with:
           workspaces: app/src-tauri
 
+      - name: Install Tauri CLI
+        run: |
+          npm install -g @tauri-apps/cli
+          echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
+
       - name: Build Tauri App
-        run: npx -y @tauri-apps/cli build ${{ matrix.args }}
+        run: tauri build ${{ matrix.args }}
         working-directory: app/src-tauri
 
       - name: Upload artifacts (Windows)
