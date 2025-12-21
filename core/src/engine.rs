@@ -10,7 +10,7 @@
 //! - Shortcut expansion
 
 use serde::{Deserialize, Serialize};
-use crate::buffer::{Buffer, BufferChar};
+use crate::buffer::Buffer;
 use crate::chars::{self, ToneMark, VowelMod};
 use crate::methods::{self, InputMethod, KeyAction};
 use crate::shortcuts::{ShortcutTable, default_shortcuts};
