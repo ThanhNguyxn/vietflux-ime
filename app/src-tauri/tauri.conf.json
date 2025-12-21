@@ -15,11 +15,12 @@
             {
                 "title": "VietFlux IME",
                 "width": 400,
-                "height": 300,
+                "height": 600,
                 "resizable": false,
                 "visible": false,
                 "center": true,
-                "decorations": true
+                "decorations": false,
+                "transparent": true
             }
         ],
         "trayIcon": {

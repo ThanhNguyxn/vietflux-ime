@@ -65,6 +65,10 @@ fn main() {
             ime::get_method,
             ime::toggle,
             ime::clear,
+            ime::get_shortcuts,
+            ime::add_shortcut,
+            ime::remove_shortcut,
+            ime::toggle_shortcut,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
