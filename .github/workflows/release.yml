@@ -71,6 +71,7 @@ jobs:
 
       - name: Install Tauri CLI
         run: npm install @tauri-apps/cli
+        working-directory: app/src-tauri
 
       - name: Build Tauri App
         run: npx tauri build ${{ matrix.args }}
