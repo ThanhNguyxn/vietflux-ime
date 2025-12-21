@@ -204,7 +204,6 @@ Closes #29
 ## ❓ Câu hỏi?
 
 - Mở [Discussion](https://github.com/ThanhNguyxn/vietflux-ime/discussions)
-- Email: thanhnguyxn@gmail.com
 
 ---
 
