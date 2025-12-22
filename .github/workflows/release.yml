@@ -78,10 +78,8 @@ jobs:
         run: npm install
         working-directory: app/src-tauri
 
-      - name: Fix permissions (non-Windows)
-        if: matrix.platform != 'windows-latest'
-        run: chmod +x node_modules/.bin/tauri
-        working-directory: app/src-tauri
+      - name: Install Tauri CLI globally
+        run: npm install -g @tauri-apps/cli
 
       - name: Build with Tauri Action
         uses: tauri-apps/tauri-action@v0
@@ -89,6 +87,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: app/src-tauri
+          tauriScript: tauri
           args: ${{ matrix.args }}
 
       - name: Upload artifacts (Windows)
