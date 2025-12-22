@@ -534,6 +534,24 @@ pub fn is_potentially_valid(s: &str) -> bool {
     true
 }
 
+/// Check if word has 'gi' initial
+pub fn has_gi_initial(s: &str) -> bool {
+    let lower = s.to_lowercase();
+    if !lower.starts_with("gi") {
+        return false;
+    }
+    // Must be followed by a vowel or nothing (though "gi" alone is valid)
+    // Actually "gi" + vowel is the main case where tone shifts
+    // e.g. "gia", "giá", "giờ"
+    // If just "gi", tone is on 'i' (handled normally)
+    true
+}
+
+/// Check if word has 'qu' initial
+pub fn has_qu_initial(s: &str) -> bool {
+    s.to_lowercase().starts_with("qu")
+}
+
 /// Check if word ends at a valid boundary
 pub fn is_word_boundary(ch: char) -> bool {
     ch.is_whitespace()
