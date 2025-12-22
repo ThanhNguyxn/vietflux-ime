@@ -1,0 +1,2 @@
+cargo:rustc-link-search=native=D:\Code\vietflux-ime\app\src-tauri\target\debug\build\webview2-com-sys-f05f25f88e3b2872\out\x64
+cargo:rustc-link-lib=advapi32

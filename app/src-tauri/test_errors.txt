@@ -1,0 +1,40 @@
+   Compiling webview2-com-sys v0.38.0
+   Compiling tauri-build v2.5.3
+   Compiling tauri-plugin v2.5.2
+   Compiling json-patch v3.0.1
+   Compiling cookie v0.18.1
+   Compiling sha2 v0.10.9
+   Compiling tracing v0.1.44
+   Compiling ico v0.4.0
+   Compiling windows-sys v0.59.0
+   Compiling lazy_static v1.5.0
+   Compiling muda v0.17.1
+   Compiling dirs-sys v0.5.0
+   Compiling tao v0.34.5
+   Compiling softbuffer v0.4.8
+   Compiling serialize-to-javascript v0.1.2
+   Compiling tauri-utils v2.8.1
+   Compiling tauri-codegen v2.5.2
+   Compiling tauri-plugin-global-shortcut v2.3.1
+   Compiling tauri-plugin-shell v2.3.3
+   Compiling tray-icon v0.21.2
+   Compiling dirs v6.0.0
+   Compiling tokio v1.48.0
+   Compiling mime v0.3.17
+   Compiling shared_child v1.1.1
+   Compiling os_pipe v1.2.3
+   Compiling window-vibrancy v0.6.0
+   Compiling tauri v2.9.5
+   Compiling vietflux-app v1.0.0 (D:\Code\vietflux-ime\app\src-tauri)
+   Compiling global-hotkey v0.7.0
+   Compiling open v5.3.3
+   Compiling encoding_rs v0.8.35
+   Compiling tauri-macros v2.5.2
+   Compiling webview2-com v0.38.0
+error: failed to remove D:\Code\vietflux-ime\app\src-tauri\target\debug\deps\tao-e8576c1c4fe97754.tao.495d15978b0dadbc-cgu.12.rcgu.o: The process cannot access the file because it is being used by another process. (os error 32)
+
+error: could not compile `tao` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: failed to remove D:\Code\vietflux-ime\app\src-tauri\target\debug\build\tauri-9295264dd02035c2\build_script_build-9295264dd02035c2.build_script_build.cf6429995e476747-cgu.0.rcgu.o: The process cannot access the file because it is being used by another process. (os error 32)
+
+error: could not compile `tauri` (build script) due to 1 previous error

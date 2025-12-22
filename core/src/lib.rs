@@ -28,7 +28,7 @@ pub mod buffer;
 pub mod chars;
 pub mod engine;
 pub mod methods;
-pub mod shortcuts;
+pub mod shortcut;
 pub mod transform;
 pub mod validation;
 

@@ -12,7 +12,7 @@
 use crate::buffer::Buffer;
 use crate::chars::{self, ToneMark, VowelMod};
 use crate::methods::{self, InputMethod, KeyAction};
-use crate::shortcuts::{default_shortcuts, ShortcutTable};
+use crate::shortcut::ShortcutTable;
 use crate::transform;
 use crate::validation::{self, ValidationResult};
 use serde::{Deserialize, Serialize};
@@ -128,7 +128,7 @@ impl Engine {
             method: methods::get_method("telex"),
             method_name: "telex".to_string(),
             enabled: true,
-            shortcuts: default_shortcuts(),
+            shortcuts: ShortcutTable::with_defaults(),
             last_transform: LastTransform::default(),
             possible_foreign: false,
         }
@@ -153,8 +153,9 @@ impl Engine {
     }
 
     /// Add a shortcut
-    pub fn add_shortcut(&mut self, trigger: impl Into<String>, expansion: impl Into<String>) {
-        self.shortcuts.add(trigger, expansion);
+    pub fn add_shortcut(&mut self, trigger: &str, replacement: &str) {
+        use crate::shortcut::Shortcut;
+        self.shortcuts.add(Shortcut::new(trigger, replacement));
     }
 
     /// Process a key press
@@ -211,25 +212,25 @@ impl Engine {
         self.buffer.push_simple(key);
         self.last_transform = LastTransform::default();
 
-        // Check for shortcut match
-        if let Some(shortcut) = self.shortcuts.find_match(&self.buffer.get_text()) {
-            let expansion = shortcut.expansion.clone();
-            let trigger_len = shortcut.trigger.len();
+        // Check for immediate shortcut match
+        if let Some(m) = self.shortcuts.try_match(&self.buffer.get_text(), None, false) {
+            let replacement = m.replacement.clone();
+            let backspace = m.backspace_count;
 
-            // Remove trigger chars and replace with expansion
-            for _ in 0..trigger_len {
+            // Remove trigger chars
+            for _ in 0..backspace {
                 self.buffer.pop();
             }
 
-            // Add expansion chars
-            for ch in expansion.chars() {
+            // Add replacement chars
+            for ch in replacement.chars() {
                 self.buffer.push_simple(ch);
             }
 
             let text = self.buffer.get_text();
             return ProcessResult::update(
                 text,
-                self.buffer.len() + trigger_len - expansion.chars().count(),
+                self.buffer.len() + backspace - replacement.chars().count(),
             );
         }
 

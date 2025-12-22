@@ -7,6 +7,7 @@ use tauri::{
 };
 
 mod ime;
+mod core;
 
 fn main() {
     tauri::Builder::default()

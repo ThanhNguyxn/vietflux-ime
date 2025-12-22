@@ -4,3 +4,8 @@ Cargo.lock
 *.wasm
 *.js
 !web/**/*.js
+
+analysis/
+
+# Log files
+.logs/
