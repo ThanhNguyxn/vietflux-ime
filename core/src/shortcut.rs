@@ -3,13 +3,14 @@
 //! Allows users to define shortcuts like "vn" → "Việt Nam"
 //! Shortcuts can be enabled/disabled and added/removed at runtime.
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Maximum replacement length
 pub const MAX_REPLACEMENT_LEN: usize = 63;
 
 /// When to trigger
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
 pub enum TriggerCondition {
     /// Trigger immediately when buffer matches
     #[default]
@@ -19,7 +20,7 @@ pub enum TriggerCondition {
 }
 
 /// A single shortcut entry
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Shortcut {
     pub trigger: String,
     pub replacement: String,
@@ -28,18 +29,8 @@ pub struct Shortcut {
 }
 
 impl Shortcut {
-    /// Create immediate trigger shortcut
+    /// Create word boundary trigger shortcut (default)
     pub fn new(trigger: &str, replacement: &str) -> Self {
-        Self {
-            trigger: trigger.to_string(),
-            replacement: replacement.chars().take(MAX_REPLACEMENT_LEN).collect(),
-            condition: TriggerCondition::Immediate,
-            enabled: true,
-        }
-    }
-
-    /// Create word boundary trigger shortcut
-    pub fn on_boundary(trigger: &str, replacement: &str) -> Self {
         Self {
             trigger: trigger.to_string(),
             replacement: replacement.chars().take(MAX_REPLACEMENT_LEN).collect(),
@@ -47,17 +38,27 @@ impl Shortcut {
             enabled: true,
         }
     }
+
+    /// Create immediate trigger shortcut
+    pub fn immediate(trigger: &str, replacement: &str) -> Self {
+        Self {
+            trigger: trigger.to_string(),
+            replacement: replacement.chars().take(MAX_REPLACEMENT_LEN).collect(),
+            condition: TriggerCondition::Immediate,
+            enabled: true,
+        }
+    }
 }
 
 /// Shortcut match result
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ShortcutMatch {
     pub backspace_count: usize,
     pub replacement: String,
 }
 
 /// Shortcut table with on/off functionality
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ShortcutTable {
     enabled: bool,
     shortcuts: HashMap<String, Shortcut>,
@@ -180,7 +181,7 @@ mod tests {
         assert!(table.is_enabled());
         assert!(table.len() >= 5);
 
-        let m = table.try_match("ko", false);
+        let m = table.try_match("ko", true);
         assert!(m.is_some());
         assert_eq!(m.unwrap().replacement, "không");
     }

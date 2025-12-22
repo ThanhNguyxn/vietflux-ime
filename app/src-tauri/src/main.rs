@@ -14,10 +14,11 @@ fn main() {
         .setup(|app| {
             // Create system tray menu
             let quit = MenuItem::with_id(app, "quit", "Thoát", true, None::<&str>)?;
-            let toggle = MenuItem::with_id(app, "toggle", "Bật/Tắt (Ctrl+Shift)", true, None::<&str>)?;
+            let toggle =
+                MenuItem::with_id(app, "toggle", "Bật/Tắt (Ctrl+Shift)", true, None::<&str>)?;
             let telex = MenuItem::with_id(app, "telex", "Telex", true, None::<&str>)?;
             let vni = MenuItem::with_id(app, "vni", "VNI", true, None::<&str>)?;
-            
+
             let menu = Menu::with_items(app, &[&toggle, &telex, &vni, &quit])?;
 
             // Create tray icon
@@ -32,18 +33,22 @@ fn main() {
                     "toggle" => {
                         let enabled = ime::toggle();
                         let tray = app.tray_by_id("main").unwrap();
-                        let _ = tray.set_tooltip(if enabled { "VietFlux IME - Bật" } else { "VietFlux IME - Tắt" });
+                        let _ = tray.set_tooltip(if enabled {
+                            Some("VietFlux IME - Bật")
+                        } else {
+                            Some("VietFlux IME - Tắt")
+                        });
                         // In a real app we would also change the icon here
                     }
                     "telex" => {
                         ime::set_method("telex".to_string());
                         let tray = app.tray_by_id("main").unwrap();
-                        let _ = tray.set_tooltip("VietFlux IME - Telex");
+                        let _ = tray.set_tooltip(Some("VietFlux IME - Telex"));
                     }
                     "vni" => {
                         ime::set_method("vni".to_string());
                         let tray = app.tray_by_id("main").unwrap();
-                        let _ = tray.set_tooltip("VietFlux IME - VNI");
+                        let _ = tray.set_tooltip(Some("VietFlux IME - VNI"));
                     }
                     _ => {}
                 })

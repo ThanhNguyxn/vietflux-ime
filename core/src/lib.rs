@@ -32,7 +32,7 @@ pub mod shortcut;
 pub mod transform;
 pub mod validation;
 
-use engine::Engine;
+pub use engine::Engine;
 use wasm_bindgen::prelude::*;
 
 /// Main VietFlux IME instance exposed to JavaScript

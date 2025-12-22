@@ -1,7 +1,7 @@
 //! IME integration for Tauri
 
 use std::sync::Mutex;
-use vietflux_core::{Engine, shortcut::Shortcut};
+use vietflux_core::{shortcut::Shortcut, Engine};
 
 // Global IME Engine instance
 static ENGINE: Mutex<Option<Engine>> = Mutex::new(None);
@@ -29,7 +29,7 @@ pub struct ProcessResult {
 pub fn process_key(key: char, _shift: bool) -> ProcessResult {
     with_engine(|engine| {
         let result = engine.process_key(key, _shift);
-        
+
         let action_str = match result.action {
             vietflux_core::engine::Action::Commit => "commit",
             vietflux_core::engine::Action::Update => "update",
@@ -54,9 +54,7 @@ pub fn set_method(method: String) {
 
 #[tauri::command]
 pub fn get_method() -> String {
-    with_engine(|engine| {
-        engine.get_method().to_string()
-    })
+    with_engine(|engine| engine.get_method().to_string())
 }
 
 #[tauri::command]
@@ -78,9 +76,7 @@ pub fn clear() {
 
 #[tauri::command]
 pub fn get_shortcuts() -> Vec<Shortcut> {
-    with_engine(|engine| {
-        engine.get_shortcuts()
-    })
+    with_engine(|engine| engine.get_shortcuts())
 }
 
 #[tauri::command]
@@ -106,4 +102,3 @@ pub fn toggle_shortcut(trigger: String) -> Vec<Shortcut> {
         engine.get_shortcuts()
     })
 }
-

@@ -119,6 +119,8 @@ pub struct Engine {
     last_transform: LastTransform,
     /// Track if current word might be foreign
     possible_foreign: bool,
+    /// Special character prefix for shortcuts (e.g., #vn)
+    shortcut_prefix: Option<char>,
 }
 
 impl Engine {
@@ -131,6 +133,7 @@ impl Engine {
             shortcuts: ShortcutTable::with_defaults(),
             last_transform: LastTransform::default(),
             possible_foreign: false,
+            shortcut_prefix: None,
         }
     }
 
@@ -181,6 +184,11 @@ impl Engine {
 
         // Check for word boundary - triggers auto-restore check
         if validation::is_word_boundary(key) {
+            // Special case: Allow specific symbols as shortcut prefix if buffer is empty
+            if self.buffer.is_empty() && self.is_valid_prefix(key) {
+                self.shortcut_prefix = Some(key);
+                return ProcessResult::passthrough();
+            }
             return self.handle_word_boundary(key);
         }
 
@@ -228,14 +236,27 @@ impl Engine {
         self.last_transform = LastTransform::default();
 
         // Check for shortcut match
-        if let Some(m) = self.shortcuts.try_match(&self.buffer.get_text(), false) {
-            let replacement = m.replacement.clone();
-            let backspace = m.backspace_count;
+        let current_text = self.buffer.get_text();
+        let full_text = match self.shortcut_prefix {
+            Some(prefix) => format!("{}{}", prefix, current_text),
+            None => current_text.clone(),
+        };
 
-            // Remove trigger chars
-            for _ in 0..backspace {
-                self.buffer.pop();
-            }
+        if let Some(m) = self.shortcuts.try_match(&full_text, false) {
+            let replacement = m.replacement.clone();
+            // Backspace count includes buffer length + prefix (1) if present
+            // Note: m.backspace_count from try_match is the length of the trigger
+            // which matches full_text length.
+            // But we only need to backspace what's in the buffer + the prefix char that was passed through
+            let backspace = if self.shortcut_prefix.is_some() {
+                self.buffer.len() + 1
+            } else {
+                self.buffer.len()
+            };
+
+            // Remove trigger chars from buffer
+            self.buffer.clear();
+            self.shortcut_prefix = None; // Reset prefix
 
             // Add replacement chars
             for ch in replacement.chars() {
@@ -243,20 +264,54 @@ impl Engine {
             }
 
             let text = self.buffer.get_text();
-            return ProcessResult::update(
-                text,
-                self.buffer.len() + backspace - replacement.chars().count(),
-            );
+            return ProcessResult::update(text, backspace);
         }
 
         let text = self.buffer.get_text();
         ProcessResult::update(text, self.buffer.len() - 1)
     }
 
+    /// Check if char is a valid shortcut prefix
+    fn is_valid_prefix(&self, key: char) -> bool {
+        matches!(
+            key,
+            '#' | '@' | '!' | '$' | '%' | '^' | '&' | '*' | '/' | ':'
+        )
+    }
+
     /// Handle word boundary - check for auto-restore
     fn handle_word_boundary(&mut self, boundary_char: char) -> ProcessResult {
         if self.buffer.is_empty() {
+            // If we have a prefix but no buffer, just clear the prefix
+            if self.shortcut_prefix.is_some() {
+                self.shortcut_prefix = None;
+            }
             return ProcessResult::passthrough();
+        }
+
+        // Check for word boundary shortcut
+        let current_text = self.buffer.get_text();
+        let full_text = match self.shortcut_prefix {
+            Some(prefix) => format!("{}{}", prefix, current_text),
+            None => current_text.clone(),
+        };
+
+        if let Some(m) = self.shortcuts.try_match(&full_text, true) {
+            let replacement = m.replacement.clone();
+            let backspace = if self.shortcut_prefix.is_some() {
+                self.buffer.len() + 1
+            } else {
+                self.buffer.len()
+            };
+
+            self.buffer.clear();
+            self.shortcut_prefix = None;
+            self.reset_state();
+
+            // Append boundary char to replacement
+            let output = format!("{}{}", replacement, boundary_char);
+
+            return ProcessResult::update(output, backspace);
         }
 
         let transformed = self.buffer.get_text();
@@ -484,6 +539,7 @@ impl Engine {
     /// Clear buffer
     pub fn clear(&mut self) {
         self.buffer.clear();
+        self.shortcut_prefix = None;
         self.reset_state();
     }
 
@@ -600,7 +656,43 @@ mod tests {
         engine.process_key('k', false);
         engine.process_key('o', false);
 
-        // Should expand "ko" to "không"
-        assert_eq!(engine.get_buffer(), "không");
+        // Should NOT expand yet (OnWordBoundary default)
+        assert_eq!(engine.get_buffer(), "ko");
+
+        // Type space to trigger
+        let result = engine.process_key(' ', false);
+
+        // Should expand "ko" to "không" + space
+        // Buffer is cleared on boundary commit/update, so check result output
+        assert_eq!(result.output, "không ");
+    }
+
+    #[test]
+    fn test_shortcut_with_prefix() {
+        let mut engine = Engine::new();
+        engine.add_shortcut("#vn", "Việt Nam");
+
+        // 1. Type prefix '#'
+        let result = engine.process_key('#', false);
+        assert_eq!(result.action, Action::Passthrough);
+        assert!(engine.shortcut_prefix.is_some());
+
+        // 2. Type 'v'
+        engine.process_key('v', false);
+        assert_eq!(engine.get_buffer(), "v");
+
+        // 3. Type 'n'
+        engine.process_key('n', false);
+        assert_eq!(engine.get_buffer(), "vn");
+
+        // 4. Type SPACE to trigger
+        let result = engine.process_key(' ', false);
+
+        // Should be Update action
+        assert_eq!(result.action, Action::Update);
+        // Output should be replacement + space
+        assert_eq!(result.output, "Việt Nam ");
+        // Backspace should be 3 (#vn)
+        assert_eq!(result.backspace, 3);
     }
 }
