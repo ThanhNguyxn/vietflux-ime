@@ -155,6 +155,41 @@ pub fn find_tone_position_styled(
         return None;
     }
 
+    // Check for gi/qu initials (GoNhanh rule)
+    // If word starts with "gi" or "qu" and has multiple vowels,
+    // the first vowel (i/u) is treated as consonant/glide.
+    let word: String = chars.iter().collect();
+    let mut effective_vowels = vowel_indices;
+
+    if vowel_indices.len() > 1 {
+        if crate::validation::has_gi_initial(&word) {
+            // Skip 'i' if it's the first vowel
+            let first_vowel = chars[vowel_indices[0]].to_ascii_lowercase();
+            if chars::get_base(first_vowel) == 'i' {
+                effective_vowels = &vowel_indices[1..];
+            }
+        } else if crate::validation::has_qu_initial(&word) {
+            // Skip 'u' if it's the first vowel
+            let first_vowel = chars[vowel_indices[0]].to_ascii_lowercase();
+            if chars::get_base(first_vowel) == 'u' {
+                effective_vowels = &vowel_indices[1..];
+            }
+        }
+    }
+
+    // Use effective vowels for remaining logic
+    let vowel_indices = effective_vowels;
+
+    if vowel_indices.is_empty() {
+        // Should not happen if original had > 1 and we skipped 1,
+        // unless original had exactly 1 (handled by len > 1 check).
+        // If we skipped the only vowel (e.g. "gi" -> skip "i" -> empty),
+        // we should fallback to original.
+        // But "gi" has len=1 so it fails len>1 check.
+        // "gia" has len=2 -> skip "i" -> "a" (len=1). OK.
+        return None;
+    }
+
     // Special case: ươ compound - tone goes on ơ
     if vowel_indices.len() >= 2 {
         for i in 0..vowel_indices.len() - 1 {
@@ -487,5 +522,41 @@ mod tests {
         assert!(result.success);
         assert_eq!(chars[1], 'ư');
         assert_eq!(chars[2], 'ơ');
+    }
+
+    #[test]
+    fn test_gi_initial_tone() {
+        // "gia" -> tone on 'a' (skip 'i')
+        let chars: Vec<char> = "gia".chars().collect();
+        let vowels = find_vowel_indices(&chars);
+        assert_eq!(find_tone_position(&chars, &vowels), Some(2));
+
+        // "gi" -> tone on 'i' (only 1 vowel, no skip)
+        let chars: Vec<char> = "gi".chars().collect();
+        let vowels = find_vowel_indices(&chars);
+        assert_eq!(find_tone_position(&chars, &vowels), Some(1));
+
+        // "gieng" -> tone on 'e' (skip 'i')
+        let chars: Vec<char> = "gieng".chars().collect();
+        let vowels = find_vowel_indices(&chars);
+        assert_eq!(find_tone_position(&chars, &vowels), Some(2));
+    }
+
+    #[test]
+    fn test_qu_initial_tone() {
+        // "qua" -> tone on 'a' (skip 'u')
+        let chars: Vec<char> = "qua".chars().collect();
+        let vowels = find_vowel_indices(&chars);
+        assert_eq!(find_tone_position(&chars, &vowels), Some(2));
+
+        // "quy" -> tone on 'y' (skip 'u')
+        let chars: Vec<char> = "quy".chars().collect();
+        let vowels = find_vowel_indices(&chars);
+        assert_eq!(find_tone_position(&chars, &vowels), Some(2));
+
+        // "quan" -> tone on 'a' (skip 'u')
+        let chars: Vec<char> = "quan".chars().collect();
+        let vowels = find_vowel_indices(&chars);
+        assert_eq!(find_tone_position(&chars, &vowels), Some(2));
     }
 }
