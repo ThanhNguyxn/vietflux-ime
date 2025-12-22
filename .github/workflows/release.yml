@@ -78,6 +78,11 @@ jobs:
         run: npm install
         working-directory: app/src-tauri
 
+      - name: Fix permissions (non-Windows)
+        if: matrix.platform != 'windows-latest'
+        run: chmod +x node_modules/.bin/tauri
+        working-directory: app/src-tauri
+
       - name: Build with Tauri Action
         uses: tauri-apps/tauri-action@v0
         env:
