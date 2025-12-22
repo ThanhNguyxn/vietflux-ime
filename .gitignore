@@ -1,6 +1,21 @@
+# Rust
 /target
-/pkg
+**/target/
 Cargo.lock
+
+# WASM build outputs  
+/pkg
 *.wasm
 *.js
 !web/**/*.js
+
+# Research
+analysis/
+
+# Log files
+.logs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
