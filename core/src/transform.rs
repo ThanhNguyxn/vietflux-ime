@@ -143,7 +143,7 @@ pub fn find_tone_position(chars: &[char], vowel_indices: &[usize]) -> Option<usi
 }
 
 /// Find tone position with explicit style choice
-/// 
+///
 /// - `modern_style = true`: hoà, khoẻ, thuỷ (tone on second vowel for oa/oe/uy)
 /// - `modern_style = false`: hòa, khỏe, thủy (tone on first vowel for oa/oe/uy)
 pub fn find_tone_position_styled(
