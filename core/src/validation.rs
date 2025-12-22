@@ -19,7 +19,8 @@ pub const VALID_INITIALS: &[&str] = &[
 ];
 
 /// Valid final consonants (phụ âm cuối)  
-pub const VALID_FINALS: &[&str] = &["", "c", "ch", "m", "n", "ng", "nh", "p", "t"];
+/// Note: 'k' is allowed for ethnic minority words (Đắk, Lắk, Búk)
+pub const VALID_FINALS: &[&str] = &["", "c", "ch", "m", "n", "ng", "nh", "p", "t", "k"];
 
 /// Valid vowel nuclei (including diphthongs and triphthongs)
 pub const VALID_VOWEL_PATTERNS: &[&str] = &[
@@ -27,11 +28,14 @@ pub const VALID_VOWEL_PATTERNS: &[&str] = &[
     "a", "ă", "â", "e", "ê", "i", "o", "ô", "ơ", "u", "ư", "y",
     // Diphthongs (nguyên âm đôi)
     "ai", "ao", "au", "ay", "âu", "ây", "eo", "êu", "ia", "iê", "iu", "oa", "oă", "oe", "oi", "oo",
-    "ôi", "ơi", "ua", "uâ", "uê", "ui", "uo", "uô", "uơ", "ươ", "ưa", "ưi", "ưu", "ya", "yê",
+    "ôi", "ơi", "ua", "uâ", "uê", "ui", "uo", "uô", "uơ", "ươ", "ưa", "ưi", "ưu", "ya", "yê", "uy",
     // Triphthongs (nguyên âm ba)
     "iêu", "oai", "oay", "oeo", "uây", "uôi", "ươi", "ươu", "yêu",
     // With qu- prefix patterns
     "uya", "uyê", "uyu",
+    // Special triphthongs (from GoNhanh analysis)
+    "uêu", // nguều ngoào
+    "oao", // ngoào
 ];
 
 /// Foreign word consonant clusters (not valid in Vietnamese)
@@ -120,6 +124,13 @@ pub fn validate(s: &str) -> ValidationResult {
             return ValidationResult::InvalidVowelPattern;
         }
 
+        // Rule 7: Breve restriction - ă cannot be followed by another vowel
+        // Valid: ăm, ăn, ăng (consonant endings), oă (xoăn)
+        // Invalid: ăi, ăo, ău, ăy
+        if is_breve_followed_by_vowel(vowel) {
+            return ValidationResult::InvalidVowelPattern;
+        }
+
         ValidationResult::Valid
     } else {
         ValidationResult::InvalidSpelling
@@ -132,8 +143,10 @@ pub fn is_valid_syllable(s: &str) -> bool {
 }
 
 /// Check if pattern looks like a foreign/English word
+/// Based on 8 patterns from GoNhanh auto-restore analysis
 pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool {
     let lower = buffer.to_lowercase();
+    let chars: Vec<char> = lower.chars().collect();
 
     // Skip check if buffer has Vietnamese diacritics (horn, circumflex, breve)
     // User is typing Vietnamese intentionally
@@ -145,6 +158,91 @@ pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool
     if is_valid_typing_sequence(&lower) {
         return false;
     }
+
+    // ============================================================
+    // 8 ENGLISH AUTO-RESTORE PATTERNS (from GoNhanh analysis)
+    // ============================================================
+
+    // PATTERN 1: MODIFIER + CONSONANT (not sonorant)
+    // "text" → x+t, "expect" → x+p → English
+    // Exception: Modifier + sonorant (m,n,ng,nh) → Vietnamese "làm"
+    if let Some(mod_key) = modifier_key {
+        if is_tone_modifier(mod_key) && chars.len() >= 2 {
+            let last = chars[chars.len() - 1];
+            // Allow sonorants (m, n) as they're valid Vietnamese endings
+            if !matches!(last, 'm' | 'n') && crate::chars::is_consonant(last) {
+                // Check if last char would be added after a vowel (vietnamese) or consonant (english)
+                if chars.len() >= 2 {
+                    let second_last = chars[chars.len() - 2];
+                    if crate::chars::is_consonant(second_last) {
+                        return true; // Consonant cluster after modifier = English
+                    }
+                }
+            }
+        }
+    }
+
+    // PATTERN 2: W AT START + CONSONANT
+    // "water", "window", "world" → English
+    // Exception: "ưng", "ưn" (w + sonorant final) → Vietnamese
+    if lower.starts_with('w') && chars.len() > 1 {
+        let second = chars[1];
+        if crate::chars::is_consonant(second) && second != 'h' {
+            return true;
+        }
+    }
+
+    // PATTERN 3: EI VOWEL PAIR
+    // "their", "weird" → English (Vietnamese doesn't have "ei" diphthong)
+    if lower.contains("ei") {
+        return true;
+    }
+
+    // PATTERN 4: P INITIAL + AI PATTERN
+    // "pair", "paint" → English (P initial is rare in pure Vietnamese)
+    if lower.starts_with('p') && !lower.starts_with("ph") && lower.contains("ai") {
+        return true;
+    }
+
+    // PATTERN 5: W AS FINAL
+    // "raw", "law", "saw" → English (W cannot be final in Vietnamese)
+    if lower.ends_with('w') {
+        return true;
+    }
+
+    // PATTERN 6: F INITIAL
+    // "fix", "file", "focus" → English (Vietnamese uses PH for /f/)
+    if lower.starts_with('f') {
+        return true;
+    }
+
+    // PATTERN 7: MODIFIER + K ENDING
+    // "risk", "disk", "task" → English
+    // Exception: Ethnic minority with breve (Đắk, Lắk) - but those have diacritics so skip
+    if modifier_key.map(is_tone_modifier).unwrap_or(false) && lower.ends_with('k') {
+        // Check if NOT ethnic minority pattern (starts with đ, l, b)
+        if !matches!(chars.first(), Some('đ') | Some('l') | Some('b')) {
+            return true;
+        }
+    }
+
+    // PATTERN 8: DOUBLE VOWEL + CONSONANT (English "looks", "took")
+    // Different from Telex "aa" → "â" which creates circumflex
+    if lower.contains("oo") && chars.len() > 2 {
+        // If followed by consonant (not another vowel), likely English
+        if let Some(pos) = lower.find("oo") {
+            if pos + 2 < chars.len() {
+                let after = chars[pos + 2];
+                if crate::chars::is_consonant(after) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    // ============================================================
+    // EXISTING CHECKS (kept from before)
+    // ============================================================
 
     // Check for invalid vowel patterns (eư, oư, etc)
     for pattern in INVALID_VOWEL_PATTERNS {
@@ -176,14 +274,11 @@ pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool
     }
 
     // English prefix patterns: de+s (describe, design)
-    if lower.starts_with("de") && modifier_key == Some('s') {
-        // But not "des" alone which could be Vietnamese
-        if lower.len() > 3 {
-            return true;
-        }
+    if lower.starts_with("de") && modifier_key == Some('s') && lower.len() > 3 {
+        return true;
     }
 
-    // pr- prefix not at start of Vietnamese word
+    // pr- prefix not valid in Vietnamese
     if lower.starts_with("pr") && lower.len() > 3 {
         return true;
     }
@@ -194,6 +289,11 @@ pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool
     }
 
     false
+}
+
+/// Check if character is a tone modifier key (Telex)
+fn is_tone_modifier(c: char) -> bool {
+    matches!(c, 's' | 'f' | 'r' | 'x' | 'j')
 }
 
 // ============================================================
@@ -321,9 +421,26 @@ fn is_glide(c: char) -> bool {
     matches!(c, 'y' | 'w')
 }
 
-/// Normalize vowel pattern (remove tones for pattern matching)
+/// Normalize vowel pattern (remove tones but keep modifiers for pattern matching)
+/// e.g., "ều" → "êu" (keeps circumflex, removes grave)
 fn normalize_vowel(vowel: &str) -> String {
-    vowel.chars().map(chars::get_base).collect()
+    vowel
+        .chars()
+        .map(|c| {
+            // Get the character with modifier but without tone
+            if let Some(&(base, modifier, _tone)) = chars::REVERSE_MAP.get(&c.to_ascii_lowercase())
+            {
+                // Look up character with same base+modifier but no tone
+                chars::CHAR_MAP
+                    .get(&(base, modifier, chars::ToneMark::None))
+                    .copied()
+                    .unwrap_or(base)
+            } else {
+                // Not a Vietnamese char, return as-is
+                c
+            }
+        })
+        .collect()
 }
 
 /// Check if vowel pattern is valid
@@ -335,6 +452,33 @@ fn is_valid_vowel_pattern(vowel_base: &str) -> bool {
 
     // Check against known patterns
     VALID_VOWEL_PATTERNS.contains(&vowel_base)
+}
+
+/// Check if breve (ă) is followed by another vowel
+/// This is invalid in Vietnamese - ă can only be followed by consonants
+/// Valid: ăm, ăn, ăng, ănh, ăp, ăt, ăc (consonant endings)
+/// Valid: oă (in "xoăn" etc. - o is before ă)
+/// Invalid: ăi, ăo, ău, ăy (breve + vowel)
+fn is_breve_followed_by_vowel(vowel: &str) -> bool {
+    let chars: Vec<char> = vowel.chars().collect();
+    for i in 0..chars.len().saturating_sub(1) {
+        // Check if current char is ă (breve)
+        if chars[i] == 'ă' || chars::get_base(chars[i]) == 'a' && has_breve(chars[i]) {
+            // And next char is a vowel
+            if crate::chars::is_vowel(chars[i + 1]) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Check if character has breve modifier
+fn has_breve(c: char) -> bool {
+    matches!(
+        c,
+        'ă' | 'ắ' | 'ằ' | 'ẳ' | 'ẵ' | 'ặ' | 'Ă' | 'Ắ' | 'Ằ' | 'Ẳ' | 'Ẵ' | 'Ặ'
+    )
 }
 
 /// Check Vietnamese spelling rules
@@ -481,5 +625,96 @@ mod tests {
         assert!(is_word_boundary('=')); // Programming
         assert!(is_word_boundary('{')); // Code
         assert!(!is_word_boundary('a'));
+    }
+
+    // ============================================================
+    // NEW TESTS FOR PHASE 1 ENHANCEMENTS
+    // ============================================================
+
+    #[test]
+    fn test_ethnic_minority_k_final() {
+        // Ethnic minority words with 'k' as final consonant
+        assert!(is_valid_syllable("đắk")); // Đắk Lắk province
+        assert!(is_valid_syllable("lắk")); // Lắk
+        assert!(is_valid_syllable("búk")); // Búk district
+    }
+
+    #[test]
+    fn test_new_triphthongs() {
+        // New triphthong patterns from GoNhanh analysis
+        assert!(is_valid_syllable("khuỷu")); // khuỷu tay (elbow) - pattern uyu
+        assert!(is_valid_syllable("nguều")); // nguều ngoào - pattern uêu
+        assert!(is_valid_syllable("ngoào")); // ngoào - pattern oao
+    }
+
+    #[test]
+    fn test_breve_followed_by_vowel_invalid() {
+        // Breve (ă) cannot be followed by another vowel
+        // Valid: ăm, ăn, ăng (consonant endings)
+        // Valid: oă (o before ă, as in xoăn)
+        // Invalid: ăi, ăo, ău, ăy
+        assert!(!is_valid_syllable("tăi")); // Invalid: ă + i
+        assert!(!is_valid_syllable("băo")); // Invalid: ă + o
+        assert!(!is_valid_syllable("tău")); // Invalid: ă + u
+
+        // But these should be valid (ă + consonant)
+        assert!(is_valid_syllable("ăn")); // Valid: eat
+        assert!(is_valid_syllable("tăm")); // Valid: toothpick
+        assert!(is_valid_syllable("tắc")); // Valid: blocked
+
+        // oă pattern is valid (o before ă)
+        assert!(is_valid_syllable("xoăn")); // Valid: curly
+    }
+
+    // ============================================================
+    // 8 ENGLISH AUTO-RESTORE PATTERN TESTS
+    // ============================================================
+
+    #[test]
+    fn test_english_pattern_w_initial() {
+        // PATTERN 2: W at start + consonant
+        assert!(is_foreign_word_pattern("wn", None)); // window start
+        assert!(is_foreign_word_pattern("wr", None)); // write
+        assert!(is_foreign_word_pattern("wl", None)); // world
+    }
+
+    #[test]
+    fn test_english_pattern_ei_pair() {
+        // PATTERN 3: EI vowel pair (not in Vietnamese)
+        assert!(is_foreign_word_pattern("their", None));
+        assert!(is_foreign_word_pattern("weird", None));
+        assert!(is_foreign_word_pattern("receive", None));
+    }
+
+    #[test]
+    fn test_english_pattern_f_initial() {
+        // PATTERN 6: F initial (Vietnamese uses PH)
+        assert!(is_foreign_word_pattern("fix", None));
+        assert!(is_foreign_word_pattern("file", None));
+        assert!(is_foreign_word_pattern("focus", None));
+    }
+
+    #[test]
+    fn test_english_pattern_w_final() {
+        // PATTERN 5: W as final
+        assert!(is_foreign_word_pattern("raw", None));
+        assert!(is_foreign_word_pattern("law", None));
+        assert!(is_foreign_word_pattern("saw", None));
+    }
+
+    #[test]
+    fn test_english_pattern_p_ai() {
+        // PATTERN 4: P initial + AI pattern
+        assert!(is_foreign_word_pattern("pair", None));
+        assert!(is_foreign_word_pattern("paint", None));
+        // But "phai" without diacritics could still trigger
+    }
+
+    #[test]
+    fn test_english_pattern_double_oo() {
+        // PATTERN 8: Double vowel oo + consonant
+        assert!(is_foreign_word_pattern("look", None));
+        assert!(is_foreign_word_pattern("took", None));
+        assert!(is_foreign_word_pattern("book", None));
     }
 }
