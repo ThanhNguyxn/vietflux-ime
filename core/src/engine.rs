@@ -264,10 +264,7 @@ impl Engine {
             }
 
             let text = self.buffer.get_text();
-            return ProcessResult::update(
-                text,
-                backspace,
-            );
+            return ProcessResult::update(text, backspace);
         }
 
         let text = self.buffer.get_text();
@@ -276,7 +273,10 @@ impl Engine {
 
     /// Check if char is a valid shortcut prefix
     fn is_valid_prefix(&self, key: char) -> bool {
-        matches!(key, '#' | '@' | '!' | '$' | '%' | '^' | '&' | '*' | '/' | ':')
+        matches!(
+            key,
+            '#' | '@' | '!' | '$' | '%' | '^' | '&' | '*' | '/' | ':'
+        )
     }
 
     /// Handle word boundary - check for auto-restore
@@ -310,7 +310,7 @@ impl Engine {
 
             // Append boundary char to replacement
             let output = format!("{}{}", replacement, boundary_char);
-            
+
             return ProcessResult::update(output, backspace);
         }
 
@@ -655,7 +655,7 @@ mod tests {
 
         engine.process_key('k', false);
         engine.process_key('o', false);
-        
+
         // Should NOT expand yet (OnWordBoundary default)
         assert_eq!(engine.get_buffer(), "ko");
 
@@ -687,7 +687,7 @@ mod tests {
 
         // 4. Type SPACE to trigger
         let result = engine.process_key(' ', false);
-        
+
         // Should be Update action
         assert_eq!(result.action, Action::Update);
         // Output should be replacement + space

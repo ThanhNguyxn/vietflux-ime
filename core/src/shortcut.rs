@@ -3,8 +3,8 @@
 //! Allows users to define shortcuts like "vn" → "Việt Nam"
 //! Shortcuts can be enabled/disabled and added/removed at runtime.
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
 
 /// Maximum replacement length
 pub const MAX_REPLACEMENT_LEN: usize = 63;
