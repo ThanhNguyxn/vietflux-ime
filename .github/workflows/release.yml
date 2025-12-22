@@ -79,7 +79,7 @@ jobs:
         working-directory: app/src-tauri
 
       - name: Build Tauri App
-        run: npx tauri build ${{ matrix.args }}
+        run: npm run build -- ${{ matrix.args }}
         working-directory: app/src-tauri
 
       - name: Upload artifacts (Windows)
