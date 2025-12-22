@@ -34,8 +34,8 @@ pub const VALID_VOWEL_PATTERNS: &[&str] = &[
     // With qu- prefix patterns
     "uya", "uyê", "uyu",
     // Special triphthongs (from GoNhanh analysis)
-    "uêu",  // nguều ngoào
-    "oao",  // ngoào
+    "uêu", // nguều ngoào
+    "oao", // ngoào
 ];
 
 /// Foreign word consonant clusters (not valid in Vietnamese)
@@ -210,7 +210,7 @@ pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool
         return true;
     }
 
-    // PATTERN 6: F INITIAL  
+    // PATTERN 6: F INITIAL
     // "fix", "file", "focus" → English (Vietnamese uses PH for /f/)
     if lower.starts_with('f') {
         return true;
@@ -274,10 +274,9 @@ pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool
     }
 
     // English prefix patterns: de+s (describe, design)
-    if lower.starts_with("de") && modifier_key == Some('s')
-        && lower.len() > 3 {
-            return true;
-        }
+    if lower.starts_with("de") && modifier_key == Some('s') && lower.len() > 3 {
+        return true;
+    }
 
     // pr- prefix not valid in Vietnamese
     if lower.starts_with("pr") && lower.len() > 3 {
@@ -476,8 +475,10 @@ fn is_breve_followed_by_vowel(vowel: &str) -> bool {
 
 /// Check if character has breve modifier
 fn has_breve(c: char) -> bool {
-    matches!(c, 'ă' | 'ắ' | 'ằ' | 'ẳ' | 'ẵ' | 'ặ' | 
-                'Ă' | 'Ắ' | 'Ằ' | 'Ẳ' | 'Ẵ' | 'Ặ')
+    matches!(
+        c,
+        'ă' | 'ắ' | 'ằ' | 'ẳ' | 'ẵ' | 'ặ' | 'Ă' | 'Ắ' | 'Ằ' | 'Ẳ' | 'Ẵ' | 'Ặ'
+    )
 }
 
 /// Check Vietnamese spelling rules
@@ -653,15 +654,67 @@ mod tests {
         // Valid: oă (o before ă, as in xoăn)
         // Invalid: ăi, ăo, ău, ăy
         assert!(!is_valid_syllable("tăi")); // Invalid: ă + i
-        assert!(!is_valid_syllable("băo")); // Invalid: ă + o  
+        assert!(!is_valid_syllable("băo")); // Invalid: ă + o
         assert!(!is_valid_syllable("tău")); // Invalid: ă + u
-        
+
         // But these should be valid (ă + consonant)
-        assert!(is_valid_syllable("ăn"));  // Valid: eat
+        assert!(is_valid_syllable("ăn")); // Valid: eat
         assert!(is_valid_syllable("tăm")); // Valid: toothpick
         assert!(is_valid_syllable("tắc")); // Valid: blocked
-        
+
         // oă pattern is valid (o before ă)
         assert!(is_valid_syllable("xoăn")); // Valid: curly
+    }
+
+    // ============================================================
+    // 8 ENGLISH AUTO-RESTORE PATTERN TESTS
+    // ============================================================
+
+    #[test]
+    fn test_english_pattern_w_initial() {
+        // PATTERN 2: W at start + consonant
+        assert!(is_foreign_word_pattern("wn", None)); // window start
+        assert!(is_foreign_word_pattern("wr", None)); // write
+        assert!(is_foreign_word_pattern("wl", None)); // world
+    }
+
+    #[test]
+    fn test_english_pattern_ei_pair() {
+        // PATTERN 3: EI vowel pair (not in Vietnamese)
+        assert!(is_foreign_word_pattern("their", None));
+        assert!(is_foreign_word_pattern("weird", None));
+        assert!(is_foreign_word_pattern("receive", None));
+    }
+
+    #[test]
+    fn test_english_pattern_f_initial() {
+        // PATTERN 6: F initial (Vietnamese uses PH)
+        assert!(is_foreign_word_pattern("fix", None));
+        assert!(is_foreign_word_pattern("file", None));
+        assert!(is_foreign_word_pattern("focus", None));
+    }
+
+    #[test]
+    fn test_english_pattern_w_final() {
+        // PATTERN 5: W as final
+        assert!(is_foreign_word_pattern("raw", None));
+        assert!(is_foreign_word_pattern("law", None));
+        assert!(is_foreign_word_pattern("saw", None));
+    }
+
+    #[test]
+    fn test_english_pattern_p_ai() {
+        // PATTERN 4: P initial + AI pattern
+        assert!(is_foreign_word_pattern("pair", None));
+        assert!(is_foreign_word_pattern("paint", None));
+        // But "phai" without diacritics could still trigger
+    }
+
+    #[test]
+    fn test_english_pattern_double_oo() {
+        // PATTERN 8: Double vowel oo + consonant
+        assert!(is_foreign_word_pattern("look", None));
+        assert!(is_foreign_word_pattern("took", None));
+        assert!(is_foreign_word_pattern("book", None));
     }
 }
