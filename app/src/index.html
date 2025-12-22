@@ -6,100 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VietFlux IME</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Inter Font -->
+    <!-- Inter Font & JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
         rel="stylesheet">
-    <style>
-        /* Modal Styles */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-            z-index: 100;
-        }
-
-        .modal-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .modal {
-            background: var(--bg-panel);
-            padding: 20px;
-            border-radius: var(--radius-md);
-            width: 300px;
-            border: 1px solid var(--border);
-            transform: translateY(10px);
-            transition: transform 0.2s;
-        }
-
-        .modal-overlay.active .modal {
-            transform: translateY(0);
-        }
-
-        .input-group {
-            margin-bottom: 16px;
-        }
-
-        .input-label {
-            display: block;
-            font-size: 12px;
-            margin-bottom: 6px;
-            color: var(--text-muted);
-        }
-
-        .input-field {
-            width: 100%;
-            padding: 8px 12px;
-            background: var(--bg-app);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            color: var(--text-main);
-            font-size: 14px;
-            outline: none;
-        }
-
-        .input-field:focus {
-            border-color: var(--primary);
-        }
-
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border-radius: var(--radius-sm);
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            border: none;
-        }
-
-        .btn-cancel {
-            background: transparent;
-            color: var(--text-muted);
-        }
-
-        .btn-confirm {
-            background: var(--primary);
-            color: white;
-        }
-    </style>
 </head>
 
 <body>
@@ -107,13 +19,13 @@
         <!-- Header -->
         <header data-tauri-drag-region>
             <div class="brand" data-tauri-drag-region>
-                <div class="logo">⚡</div>
-                <div>
+                <div class="logo">V</div>
+                <div class="app-info">
                     <div class="app-name">VietFlux</div>
                     <span class="version">v1.0.0</span>
                 </div>
             </div>
-            <div class="toggle-switch" id="mainToggle">
+            <div class="toggle-switch" id="mainToggle" title="Bật/Tắt bộ gõ (Ctrl+Shift)">
                 <div class="toggle-thumb"></div>
             </div>
         </header>
@@ -122,7 +34,9 @@
         <main>
             <!-- Input Method Section -->
             <div class="card">
-                <div class="section-title">Bộ gõ</div>
+                <div class="section-header">
+                    <div class="section-title">Bộ gõ</div>
+                </div>
                 <div class="control-row">
                     <span class="label">Kiểu gõ</span>
                     <div class="segmented-control">
@@ -130,22 +44,14 @@
                         <button class="segment-btn" data-value="vni">VNI</button>
                     </div>
                 </div>
-                <div class="control-row" style="margin-top: 12px;">
-                    <span class="label">Phím tắt bật/tắt</span>
-                    <div class="shortcut-display">
-                        <kbd
-                            style="background: var(--bg-app); padding: 4px 8px; border-radius: 6px; font-family: monospace; font-size: 12px; border: 1px solid var(--border);">Ctrl
-                            + Shift</kbd>
-                    </div>
-                </div>
             </div>
 
             <!-- Shortcuts Section -->
             <div class="card" style="flex: 1; display: flex; flex-direction: column;">
-                <div class="control-row">
-                    <div class="section-title" style="margin-bottom: 0;">Từ viết tắt</div>
+                <div class="section-header" style="margin-bottom: 12px;">
+                    <div class="section-title" style="margin-bottom: 0;">Gõ tắt</div>
                     <button class="btn-icon" id="addShortcutBtn" title="Thêm từ viết tắt">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -158,27 +64,20 @@
                 </div>
             </div>
 
-            <!-- Excluded Apps Section -->
+            <!-- Excluded Apps Section (Placeholder) -->
             <div class="card">
-                <div class="control-row">
-                    <div class="section-title" style="margin-bottom: 0;">Ứng dụng bỏ qua</div>
-                    <button class="btn-icon" title="Thêm ứng dụng">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                <div class="section-header" style="margin-bottom: 12px;">
+                    <div class="section-title" style="margin-bottom: 0;">Ứng dụng loại trừ</div>
+                    <button class="btn-icon" title="Tính năng đang phát triển">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
                     </button>
                 </div>
-                <div class="shortcut-list" style="max-height: 100px;">
-                    <div class="shortcut-item">
-                        <div class="shortcut-content">
-                            <span style="font-size: 13px;">Terminal</span>
-                        </div>
-                        <div class="toggle-switch active" style="width: 36px; height: 20px;">
-                            <div class="toggle-thumb" style="width: 16px; height: 16px;"></div>
-                        </div>
-                    </div>
+                <div style="padding: 8px; text-align: center; color: var(--text-muted); font-size: 13px;">
+                    Tính năng đang được cập nhật...
                 </div>
             </div>
         </main>
@@ -202,7 +101,7 @@
                     <polyline points="15 3 21 3 21 9"></polyline>
                     <line x1="10" y1="14" x2="21" y2="3"></line>
                 </svg>
-                Ẩn
+                Ẩn xuống khay
             </button>
         </footer>
     </div>
@@ -210,14 +109,14 @@
     <!-- Add Shortcut Modal -->
     <div class="modal-overlay" id="addShortcutModal">
         <div class="modal">
-            <h3 style="margin-bottom: 16px; font-size: 16px;">Thêm từ viết tắt</h3>
+            <h3 style="margin-bottom: 20px; font-size: 18px; font-weight: 700;">Thêm từ viết tắt</h3>
             <div class="input-group">
                 <label class="input-label">Từ tắt (ví dụ: vn)</label>
-                <input type="text" class="input-field" id="triggerInput" placeholder="Nhập từ tắt...">
+                <input type="text" class="input-field" id="triggerInput" placeholder="Nhập từ tắt..." autocomplete="off">
             </div>
             <div class="input-group">
                 <label class="input-label">Cụm từ thay thế</label>
-                <input type="text" class="input-field" id="expansionInput" placeholder="Nhập cụm từ...">
+                <input type="text" class="input-field" id="expansionInput" placeholder="Nhập cụm từ..." autocomplete="off">
             </div>
             <div class="modal-actions">
                 <button class="btn btn-cancel" id="cancelAddBtn">Hủy</button>
@@ -261,23 +160,28 @@
 
             // Shortcuts
             if (state.shortcuts.length === 0) {
-                shortcutList.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px;">Chưa có từ viết tắt nào</div>';
+                shortcutList.innerHTML = `
+                    <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 30px 0;">
+                        <div style="font-size: 24px; margin-bottom: 8px; opacity: 0.5;">📝</div>
+                        Chưa có từ viết tắt nào
+                    </div>`;
             } else {
-                shortcutList.innerHTML = state.shortcuts.map((s, index) => `
+                shortcutList.innerHTML = state.shortcuts.map((s) => `
                     <div class="shortcut-item">
                         <div class="shortcut-content">
                             <span class="trigger">${s.trigger}</span>
                             <span class="arrow">→</span>
-                            <span class="expansion">${s.expansion}</span>
+                            <span class="expansion" title="${s.expansion}">${s.expansion}</span>
                         </div>
                         <div class="control-row" style="gap: 8px; margin: 0;">
                             <div class="toggle-switch ${s.enabled ? 'active' : ''}" 
                                  style="width: 36px; height: 20px;"
-                                 onclick="toggleShortcut(${index})">
+                                 onclick="toggleShortcut('${s.trigger}')"
+                                 title="${s.enabled ? 'Tắt' : 'Bật'}">
                                 <div class="toggle-thumb" style="width: 16px; height: 16px;"></div>
                             </div>
-                            <button class="btn-icon danger" onclick="deleteShortcut(${index})" style="width: 24px; height: 24px;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            <button class="btn-icon danger" onclick="deleteShortcut('${s.trigger}')" style="width: 28px; height: 28px;" title="Xóa">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                             </button>
                         </div>
                     </div>
@@ -286,19 +190,19 @@
         }
 
         // Actions
-        window.toggleShortcut = async (index) => {
+        window.toggleShortcut = async (trigger) => {
             try {
-                state.shortcuts = await invoke('toggle_shortcut', { index });
+                state.shortcuts = await invoke('toggle_shortcut', { trigger });
                 renderUI();
             } catch (e) {
                 console.error(e);
             }
         };
 
-        window.deleteShortcut = async (index) => {
-            if (confirm('Bạn có chắc muốn xóa?')) {
+        window.deleteShortcut = async (trigger) => {
+            if (confirm(`Bạn có chắc muốn xóa từ tắt "${trigger}"?`)) {
                 try {
-                    state.shortcuts = await invoke('remove_shortcut', { index });
+                    state.shortcuts = await invoke('remove_shortcut', { trigger });
                     renderUI();
                 } catch (e) {
                     console.error(e);
@@ -320,6 +224,11 @@
 
         cancelAddBtn.addEventListener('click', closeModal);
 
+        // Close modal on outside click
+        addShortcutModal.addEventListener('click', (e) => {
+            if (e.target === addShortcutModal) closeModal();
+        });
+
         confirmAddBtn.addEventListener('click', async () => {
             const trigger = triggerInput.value.trim();
             const expansion = expansionInput.value.trim();
@@ -331,9 +240,14 @@
                     closeModal();
                 } catch (e) {
                     console.error(e);
-                    alert('Lỗi khi thêm phím tắt');
+                    alert('Lỗi khi thêm phím tắt: ' + e);
                 }
             }
+        });
+
+        // Enter key in inputs
+        expansionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') confirmAddBtn.click();
         });
 
         // Event Listeners
@@ -358,11 +272,14 @@
         // Initialize
         async function init() {
             try {
+                // Load initial state
                 state.method = await invoke('get_method');
                 state.shortcuts = await invoke('get_shortcuts');
-                // Note: toggle state is not exposed via get_enabled yet, assuming true or sync later
+                // We assume enabled is true by default or we should add get_enabled command
+                // For now, let's assume true, or toggle twice to sync? 
+                // Better: Add get_enabled to backend. But for now, let's just render.
             } catch (e) {
-                console.error(e);
+                console.error("Init error:", e);
             }
             renderUI();
         }

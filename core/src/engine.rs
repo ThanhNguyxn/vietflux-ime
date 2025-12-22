@@ -158,6 +158,21 @@ impl Engine {
         self.shortcuts.add(Shortcut::new(trigger, replacement));
     }
 
+    /// Remove a shortcut
+    pub fn remove_shortcut(&mut self, trigger: &str) {
+        self.shortcuts.remove(trigger);
+    }
+
+    /// Toggle a shortcut
+    pub fn toggle_shortcut(&mut self, trigger: &str) {
+        self.shortcuts.toggle(trigger);
+    }
+
+    /// Get all shortcuts
+    pub fn get_shortcuts(&self) -> Vec<crate::shortcut::Shortcut> {
+        self.shortcuts.get_all()
+    }
+
     /// Process a key press
     pub fn process_key(&mut self, key: char, _shift: bool) -> ProcessResult {
         if !self.enabled {
