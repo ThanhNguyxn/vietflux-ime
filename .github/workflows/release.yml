@@ -74,18 +74,13 @@ jobs:
         with:
           node-version: "lts/*"
 
-      - name: Install Tauri CLI
-        run: npm install
-        working-directory: app/src-tauri
-
-      - name: Fix permissions (macOS)
-        if: matrix.platform == 'macos-latest'
-        run: chmod +x node_modules/.bin/tauri
-        working-directory: app/src-tauri
-
-      - name: Build Tauri App
-        run: npx @tauri-apps/cli build ${{ matrix.args }}
-        working-directory: app/src-tauri
+      - name: Build with Tauri Action
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: app/src-tauri
+          args: ${{ matrix.args }}
 
       - name: Upload artifacts (Windows)
         if: matrix.platform == 'windows-latest'
