@@ -69,6 +69,11 @@ jobs:
         with:
           workspaces: app/src-tauri
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
       - name: Install Tauri CLI
         run: npm install
         working-directory: app/src-tauri
