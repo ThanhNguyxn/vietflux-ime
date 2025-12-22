@@ -84,9 +84,8 @@ jobs:
         working-directory: app/src-tauri
 
       - name: Build Tauri App
-        run: ./node_modules/.bin/tauri build ${{ matrix.args }}
+        run: npx @tauri-apps/cli build ${{ matrix.args }}
         working-directory: app/src-tauri
-        shell: bash
 
       - name: Upload artifacts (Windows)
         if: matrix.platform == 'windows-latest'
