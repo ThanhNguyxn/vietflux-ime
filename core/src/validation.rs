@@ -143,8 +143,10 @@ pub fn is_valid_syllable(s: &str) -> bool {
 }
 
 /// Check if pattern looks like a foreign/English word
+/// Based on 8 patterns from GoNhanh auto-restore analysis
 pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool {
     let lower = buffer.to_lowercase();
+    let chars: Vec<char> = lower.chars().collect();
 
     // Skip check if buffer has Vietnamese diacritics (horn, circumflex, breve)
     // User is typing Vietnamese intentionally
@@ -156,6 +158,91 @@ pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool
     if is_valid_typing_sequence(&lower) {
         return false;
     }
+
+    // ============================================================
+    // 8 ENGLISH AUTO-RESTORE PATTERNS (from GoNhanh analysis)
+    // ============================================================
+
+    // PATTERN 1: MODIFIER + CONSONANT (not sonorant)
+    // "text" → x+t, "expect" → x+p → English
+    // Exception: Modifier + sonorant (m,n,ng,nh) → Vietnamese "làm"
+    if let Some(mod_key) = modifier_key {
+        if is_tone_modifier(mod_key) && chars.len() >= 2 {
+            let last = chars[chars.len() - 1];
+            // Allow sonorants (m, n) as they're valid Vietnamese endings
+            if !matches!(last, 'm' | 'n') && crate::chars::is_consonant(last) {
+                // Check if last char would be added after a vowel (vietnamese) or consonant (english)
+                if chars.len() >= 2 {
+                    let second_last = chars[chars.len() - 2];
+                    if crate::chars::is_consonant(second_last) {
+                        return true; // Consonant cluster after modifier = English
+                    }
+                }
+            }
+        }
+    }
+
+    // PATTERN 2: W AT START + CONSONANT
+    // "water", "window", "world" → English
+    // Exception: "ưng", "ưn" (w + sonorant final) → Vietnamese
+    if lower.starts_with('w') && chars.len() > 1 {
+        let second = chars[1];
+        if crate::chars::is_consonant(second) && second != 'h' {
+            return true;
+        }
+    }
+
+    // PATTERN 3: EI VOWEL PAIR
+    // "their", "weird" → English (Vietnamese doesn't have "ei" diphthong)
+    if lower.contains("ei") {
+        return true;
+    }
+
+    // PATTERN 4: P INITIAL + AI PATTERN
+    // "pair", "paint" → English (P initial is rare in pure Vietnamese)
+    if lower.starts_with('p') && !lower.starts_with("ph") && lower.contains("ai") {
+        return true;
+    }
+
+    // PATTERN 5: W AS FINAL
+    // "raw", "law", "saw" → English (W cannot be final in Vietnamese)
+    if lower.ends_with('w') {
+        return true;
+    }
+
+    // PATTERN 6: F INITIAL  
+    // "fix", "file", "focus" → English (Vietnamese uses PH for /f/)
+    if lower.starts_with('f') {
+        return true;
+    }
+
+    // PATTERN 7: MODIFIER + K ENDING
+    // "risk", "disk", "task" → English
+    // Exception: Ethnic minority with breve (Đắk, Lắk) - but those have diacritics so skip
+    if modifier_key.map(is_tone_modifier).unwrap_or(false) && lower.ends_with('k') {
+        // Check if NOT ethnic minority pattern (starts with đ, l, b)
+        if !matches!(chars.first(), Some('đ') | Some('l') | Some('b')) {
+            return true;
+        }
+    }
+
+    // PATTERN 8: DOUBLE VOWEL + CONSONANT (English "looks", "took")
+    // Different from Telex "aa" → "â" which creates circumflex
+    if lower.contains("oo") && chars.len() > 2 {
+        // If followed by consonant (not another vowel), likely English
+        if let Some(pos) = lower.find("oo") {
+            if pos + 2 < chars.len() {
+                let after = chars[pos + 2];
+                if crate::chars::is_consonant(after) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    // ============================================================
+    // EXISTING CHECKS (kept from before)
+    // ============================================================
 
     // Check for invalid vowel patterns (eư, oư, etc)
     for pattern in INVALID_VOWEL_PATTERNS {
@@ -187,14 +274,12 @@ pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool
     }
 
     // English prefix patterns: de+s (describe, design)
-    if lower.starts_with("de") && modifier_key == Some('s') {
-        // But not "des" alone which could be Vietnamese
-        if lower.len() > 3 {
+    if lower.starts_with("de") && modifier_key == Some('s')
+        && lower.len() > 3 {
             return true;
         }
-    }
 
-    // pr- prefix not at start of Vietnamese word
+    // pr- prefix not valid in Vietnamese
     if lower.starts_with("pr") && lower.len() > 3 {
         return true;
     }
@@ -205,6 +290,11 @@ pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool
     }
 
     false
+}
+
+/// Check if character is a tone modifier key (Telex)
+fn is_tone_modifier(c: char) -> bool {
+    matches!(c, 's' | 'f' | 'r' | 'x' | 'j')
 }
 
 // ============================================================
