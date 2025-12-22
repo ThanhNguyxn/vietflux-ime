@@ -134,10 +134,23 @@ pub fn has_modifier(ch: char) -> bool {
 /// 2. For ươ compound: put tone on ơ (second vowel)
 /// 3. If there's only one vowel → put tone on it
 /// 4. If there are two vowels:
-///    - If vowel cluster is: ia, ua, ưa, oa, oe, ue, uy → put on first
-///    - Otherwise → put on second (last)
+///    - Modern style (hoà): oa, oe, uy → tone on second
+///    - Traditional style (hòa): oa, oe, uy → tone on first
+///    - Other pairs: see pattern matching
 /// 5. If there are three vowels → put tone on the middle one
 pub fn find_tone_position(chars: &[char], vowel_indices: &[usize]) -> Option<usize> {
+    find_tone_position_styled(chars, vowel_indices, true) // Default to modern style
+}
+
+/// Find tone position with explicit style choice
+/// 
+/// - `modern_style = true`: hoà, khoẻ, thuỷ (tone on second vowel for oa/oe/uy)
+/// - `modern_style = false`: hòa, khỏe, thủy (tone on first vowel for oa/oe/uy)
+pub fn find_tone_position_styled(
+    chars: &[char],
+    vowel_indices: &[usize],
+    modern_style: bool,
+) -> Option<usize> {
     if vowel_indices.is_empty() {
         return None;
     }
@@ -187,7 +200,25 @@ pub fn find_tone_position(chars: &[char], vowel_indices: &[usize]) -> Option<usi
             let first_base = chars::get_base(first);
             let second_base = chars::get_base(second);
 
-            // Special pairs where tone goes on first vowel
+            // Modern/Traditional style patterns (oa, oe, uy)
+            // These are the only patterns affected by style choice
+            let style_patterns = [
+                ('o', 'a'), // hoa → hoà (modern) / hòa (traditional)
+                ('o', 'e'), // khoe → khoẻ (modern) / khỏe (traditional)
+                ('u', 'y'), // thuy → thuỳ (modern) / thủy (traditional)
+            ];
+
+            for (f, s) in style_patterns {
+                if first_base == f && second_base == s {
+                    return if modern_style {
+                        Some(vowel_indices[1]) // Modern: second vowel
+                    } else {
+                        Some(vowel_indices[0]) // Traditional: first vowel
+                    };
+                }
+            }
+
+            // Other pairs where tone goes on first vowel (not affected by style)
             let first_tone_pairs = [
                 ('i', 'a'),
                 ('i', 'ê'), // ia, iê
@@ -196,8 +227,13 @@ pub fn find_tone_position(chars: &[char], vowel_indices: &[usize]) -> Option<usi
                 ('u', 'ơ'), // ua, uô, uơ
                 ('ư', 'a'),
                 ('ư', 'ơ'), // ưa, ươ
-                ('o', 'a'),
-                ('o', 'e'), // oa, oe
+                ('a', 'i'),
+                ('a', 'o'),
+                ('a', 'u'),
+                ('a', 'y'), // ai, ao, au, ay
+                ('e', 'o'), // eo
+                ('o', 'i'), // oi
+                ('u', 'i'), // ui
             ];
 
             // Check if this is a "first vowel" pair

@@ -19,7 +19,8 @@ pub const VALID_INITIALS: &[&str] = &[
 ];
 
 /// Valid final consonants (phụ âm cuối)  
-pub const VALID_FINALS: &[&str] = &["", "c", "ch", "m", "n", "ng", "nh", "p", "t"];
+/// Note: 'k' is allowed for ethnic minority words (Đắk, Lắk, Búk)
+pub const VALID_FINALS: &[&str] = &["", "c", "ch", "m", "n", "ng", "nh", "p", "t", "k"];
 
 /// Valid vowel nuclei (including diphthongs and triphthongs)
 pub const VALID_VOWEL_PATTERNS: &[&str] = &[
@@ -27,11 +28,14 @@ pub const VALID_VOWEL_PATTERNS: &[&str] = &[
     "a", "ă", "â", "e", "ê", "i", "o", "ô", "ơ", "u", "ư", "y",
     // Diphthongs (nguyên âm đôi)
     "ai", "ao", "au", "ay", "âu", "ây", "eo", "êu", "ia", "iê", "iu", "oa", "oă", "oe", "oi", "oo",
-    "ôi", "ơi", "ua", "uâ", "uê", "ui", "uo", "uô", "uơ", "ươ", "ưa", "ưi", "ưu", "ya", "yê",
+    "ôi", "ơi", "ua", "uâ", "uê", "ui", "uo", "uô", "uơ", "ươ", "ưa", "ưi", "ưu", "ya", "yê", "uy",
     // Triphthongs (nguyên âm ba)
     "iêu", "oai", "oay", "oeo", "uây", "uôi", "ươi", "ươu", "yêu",
     // With qu- prefix patterns
     "uya", "uyê", "uyu",
+    // Special triphthongs (from GoNhanh analysis)
+    "uêu",  // nguều ngoào
+    "oao",  // ngoào
 ];
 
 /// Foreign word consonant clusters (not valid in Vietnamese)
@@ -117,6 +121,13 @@ pub fn validate(s: &str) -> ValidationResult {
         // Rule 6: Valid vowel pattern (diphthong/triphthong)
         let vowel_base = normalize_vowel(vowel);
         if !is_valid_vowel_pattern(&vowel_base) {
+            return ValidationResult::InvalidVowelPattern;
+        }
+
+        // Rule 7: Breve restriction - ă cannot be followed by another vowel
+        // Valid: ăm, ăn, ăng (consonant endings), oă (xoăn)
+        // Invalid: ăi, ăo, ău, ăy
+        if is_breve_followed_by_vowel(vowel) {
             return ValidationResult::InvalidVowelPattern;
         }
 
@@ -321,9 +332,26 @@ fn is_glide(c: char) -> bool {
     matches!(c, 'y' | 'w')
 }
 
-/// Normalize vowel pattern (remove tones for pattern matching)
+/// Normalize vowel pattern (remove tones but keep modifiers for pattern matching)
+/// e.g., "ều" → "êu" (keeps circumflex, removes grave)
 fn normalize_vowel(vowel: &str) -> String {
-    vowel.chars().map(chars::get_base).collect()
+    vowel
+        .chars()
+        .map(|c| {
+            // Get the character with modifier but without tone
+            if let Some(&(base, modifier, _tone)) = chars::REVERSE_MAP.get(&c.to_ascii_lowercase())
+            {
+                // Look up character with same base+modifier but no tone
+                chars::CHAR_MAP
+                    .get(&(base, modifier, chars::ToneMark::None))
+                    .copied()
+                    .unwrap_or(base)
+            } else {
+                // Not a Vietnamese char, return as-is
+                c
+            }
+        })
+        .collect()
 }
 
 /// Check if vowel pattern is valid
@@ -335,6 +363,31 @@ fn is_valid_vowel_pattern(vowel_base: &str) -> bool {
 
     // Check against known patterns
     VALID_VOWEL_PATTERNS.contains(&vowel_base)
+}
+
+/// Check if breve (ă) is followed by another vowel
+/// This is invalid in Vietnamese - ă can only be followed by consonants
+/// Valid: ăm, ăn, ăng, ănh, ăp, ăt, ăc (consonant endings)
+/// Valid: oă (in "xoăn" etc. - o is before ă)
+/// Invalid: ăi, ăo, ău, ăy (breve + vowel)
+fn is_breve_followed_by_vowel(vowel: &str) -> bool {
+    let chars: Vec<char> = vowel.chars().collect();
+    for i in 0..chars.len().saturating_sub(1) {
+        // Check if current char is ă (breve)
+        if chars[i] == 'ă' || chars::get_base(chars[i]) == 'a' && has_breve(chars[i]) {
+            // And next char is a vowel
+            if crate::chars::is_vowel(chars[i + 1]) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Check if character has breve modifier
+fn has_breve(c: char) -> bool {
+    matches!(c, 'ă' | 'ắ' | 'ằ' | 'ẳ' | 'ẵ' | 'ặ' | 
+                'Ă' | 'Ắ' | 'Ằ' | 'Ẳ' | 'Ẵ' | 'Ặ')
 }
 
 /// Check Vietnamese spelling rules
@@ -481,5 +534,44 @@ mod tests {
         assert!(is_word_boundary('=')); // Programming
         assert!(is_word_boundary('{')); // Code
         assert!(!is_word_boundary('a'));
+    }
+
+    // ============================================================
+    // NEW TESTS FOR PHASE 1 ENHANCEMENTS
+    // ============================================================
+
+    #[test]
+    fn test_ethnic_minority_k_final() {
+        // Ethnic minority words with 'k' as final consonant
+        assert!(is_valid_syllable("đắk")); // Đắk Lắk province
+        assert!(is_valid_syllable("lắk")); // Lắk
+        assert!(is_valid_syllable("búk")); // Búk district
+    }
+
+    #[test]
+    fn test_new_triphthongs() {
+        // New triphthong patterns from GoNhanh analysis
+        assert!(is_valid_syllable("khuỷu")); // khuỷu tay (elbow) - pattern uyu
+        assert!(is_valid_syllable("nguều")); // nguều ngoào - pattern uêu
+        assert!(is_valid_syllable("ngoào")); // ngoào - pattern oao
+    }
+
+    #[test]
+    fn test_breve_followed_by_vowel_invalid() {
+        // Breve (ă) cannot be followed by another vowel
+        // Valid: ăm, ăn, ăng (consonant endings)
+        // Valid: oă (o before ă, as in xoăn)
+        // Invalid: ăi, ăo, ău, ăy
+        assert!(!is_valid_syllable("tăi")); // Invalid: ă + i
+        assert!(!is_valid_syllable("băo")); // Invalid: ă + o  
+        assert!(!is_valid_syllable("tău")); // Invalid: ă + u
+        
+        // But these should be valid (ă + consonant)
+        assert!(is_valid_syllable("ăn"));  // Valid: eat
+        assert!(is_valid_syllable("tăm")); // Valid: toothpick
+        assert!(is_valid_syllable("tắc")); // Valid: blocked
+        
+        // oă pattern is valid (o before ă)
+        assert!(is_valid_syllable("xoăn")); // Valid: curly
     }
 }
