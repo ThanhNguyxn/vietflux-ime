@@ -73,8 +73,13 @@ jobs:
         run: npm install
         working-directory: app/src-tauri
 
+      - name: Fix permissions (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: chmod +x node_modules/.bin/tauri
+        working-directory: app/src-tauri
+
       - name: Build Tauri App
-        run: npx tauri build ${{ matrix.args }}
+        run: npm run build -- ${{ matrix.args }}
         working-directory: app/src-tauri
 
       - name: Upload artifacts (Windows)
