@@ -108,6 +108,21 @@ impl ShortcutTable {
         result
     }
 
+    /// Toggle a shortcut
+    pub fn toggle(&mut self, trigger: &str) {
+        if let Some(s) = self.shortcuts.get_mut(trigger) {
+            s.enabled = !s.enabled;
+        }
+    }
+
+    /// Get all shortcuts (sorted by trigger length desc)
+    pub fn get_all(&self) -> Vec<Shortcut> {
+        self.sorted_triggers
+            .iter()
+            .filter_map(|t| self.shortcuts.get(t).cloned())
+            .collect()
+    }
+
     /// Try to match buffer
     pub fn try_match(&self, buffer: &str, is_word_boundary: bool) -> Option<ShortcutMatch> {
         if !self.enabled {

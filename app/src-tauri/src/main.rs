@@ -30,14 +30,20 @@ fn main() {
                         app.exit(0);
                     }
                     "toggle" => {
-                        // Toggle IME
-                        println!("Toggle IME");
+                        let enabled = ime::toggle();
+                        let tray = app.tray_by_id("main").unwrap();
+                        let _ = tray.set_tooltip(if enabled { "VietFlux IME - Bật" } else { "VietFlux IME - Tắt" });
+                        // In a real app we would also change the icon here
                     }
                     "telex" => {
-                        println!("Switch to Telex");
+                        ime::set_method("telex".to_string());
+                        let tray = app.tray_by_id("main").unwrap();
+                        let _ = tray.set_tooltip("VietFlux IME - Telex");
                     }
                     "vni" => {
-                        println!("Switch to VNI");
+                        ime::set_method("vni".to_string());
+                        let tray = app.tray_by_id("main").unwrap();
+                        let _ = tray.set_tooltip("VietFlux IME - VNI");
                     }
                     _ => {}
                 })
