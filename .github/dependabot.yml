@@ -3,16 +3,40 @@
 
 version: 2
 updates:
-  # Rust dependencies
+  # Rust dependencies (Core)
   - package-ecosystem: "cargo"
     directory: "/core"
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "deps(rust)"
+      prefix: "deps(core)"
     labels:
       - "dependencies"
-      - "rust"
+      - "core"
+    open-pull-requests-limit: 5
+
+  # Rust dependencies (App)
+  - package-ecosystem: "cargo"
+    directory: "/app/src-tauri"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(app)"
+    labels:
+      - "dependencies"
+      - "app"
+    open-pull-requests-limit: 5
+
+  # NPM dependencies (App)
+  - package-ecosystem: "npm"
+    directory: "/app/src-tauri"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(npm)"
+    labels:
+      - "dependencies"
+      - "npm"
     open-pull-requests-limit: 5
 
   # GitHub Actions
