@@ -56,6 +56,10 @@ jobs:
             # Update tauri.conf.json
             sed -i.bak "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" app/src-tauri/tauri.conf.json
             rm app/src-tauri/tauri.conf.json.bak
+
+            # Update app/package.json
+            sed -i.bak "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" app/package.json
+            rm app/package.json.bak
           fi
 
       - name: Install dependencies (Ubuntu)
