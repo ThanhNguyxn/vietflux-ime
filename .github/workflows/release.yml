@@ -163,4 +163,4 @@ jobs:
             artifacts/**/*.deb
           body: ${{ steps.tag_message.outputs.message }}
           draft: false
-          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
+          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'rc') }}
