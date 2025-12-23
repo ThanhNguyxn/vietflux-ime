@@ -283,7 +283,9 @@ impl Engine {
 
             KeyAction::Undo => self.undo_last_transform(),
 
-            KeyAction::QuickTelex(replacement) => self.apply_quick_telex(replacement, key_to_process),
+            KeyAction::QuickTelex(replacement) => {
+                self.apply_quick_telex(replacement, key_to_process)
+            }
         }
     }
 
@@ -540,21 +542,21 @@ impl Engine {
     }
 
     /// Apply stroke (d → đ) with delayed stroke logic
-    /// Based on GoNhanh's smart stroke handling:
+    /// Based on smart stroke handling:
     /// - Allow immediate stroke for short patterns (dd → đ, did → đi)
     /// - Validate syllable structure before applying to prevent invalid transforms
     fn apply_stroke(&mut self) -> ProcessResult {
         let chars: Vec<char> = self.buffer.iter().map(|bc| bc.ch).collect();
-        
+
         // Check if buffer has any vowels
         let has_vowel = chars.iter().any(|&c| chars::is_vowel(c));
-        
+
         // Check if any character has a tone mark applied (confirms Vietnamese intent)
         let has_mark = self.buffer.iter().any(|bc| {
             let base = chars::get_base(bc.ch);
             base != bc.ch // If base differs, there's a diacritic
         });
-        
+
         // Find last 'd' position
         let d_pos = (0..self.buffer.len()).rev().find(|&i| {
             if let Some(bc) = self.buffer.get(i) {
@@ -563,19 +565,19 @@ impl Engine {
                 false
             }
         });
-        
+
         if let Some(i) = d_pos {
             if let Some(bc) = self.buffer.get(i) {
                 let ch = bc.ch;
-                
-                // Delayed stroke logic from GoNhanh:
+
+                // Delayed stroke logic:
                 // If we have vowels but no mark, and this might be English (open syllable),
                 // be more cautious. But allow short patterns like "did" → "đi"
                 if has_vowel && !has_mark {
                     // Check if this is a short d+vowel+d pattern (2-3 chars)
                     // These are common Vietnamese: did→đi, dod→đo, dud→đu
                     let is_short_pattern = self.buffer.len() <= 3;
-                    
+
                     // If not a short pattern, validate the syllable first
                     if !is_short_pattern {
                         let text = self.buffer.get_text();
@@ -585,7 +587,7 @@ impl Engine {
                         }
                     }
                 }
-                
+
                 let new_char = transform::toggle_stroke(ch);
                 self.buffer.replace(i, new_char);
 
@@ -653,8 +655,12 @@ impl Engine {
         }
 
         // Add the replacement characters (preserving case of original)
-        let was_upper = self.buffer.last().map(|bc| bc.ch.is_uppercase()).unwrap_or(false);
-        
+        let was_upper = self
+            .buffer
+            .last()
+            .map(|bc| bc.ch.is_uppercase())
+            .unwrap_or(false);
+
         for (i, ch) in replacement.chars().enumerate() {
             let ch_to_push = if i == 0 && was_upper {
                 ch.to_uppercase().next().unwrap_or(ch)

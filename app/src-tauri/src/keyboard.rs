@@ -1,5 +1,5 @@
 //! Windows keyboard hook module for VietFlux IME
-//! Uses WH_KEYBOARD_LL + SendInput approach (like gonhanh.org)
+//! Uses WH_KEYBOARD_LL + SendInput approach
 
 #[cfg(windows)]
 mod windows_impl {
@@ -437,54 +437,196 @@ mod windows_impl {
 #[cfg(windows)]
 pub use windows_impl::*;
 
-// Stub for non-Windows platforms
-#[cfg(not(windows))]
+// ============================================================
+// macOS IMPLEMENTATION (CGEventTap)
+// ============================================================
+#[cfg(target_os = "macos")]
+mod macos_impl {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Mutex;
+    use vietflux_core::Engine;
+    use core_graphics::event::{CGEvent, CGEventFlags, CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType};
+    use core_foundation::runloop::{CFRunLoop, kCFRunLoopCommonModes};
+
+    /// Global engine instance
+    static ENGINE: Mutex<Option<Engine>> = Mutex::new(None);
+    
+    /// Hook running state  
+    static HOOK_RUNNING: AtomicBool = AtomicBool::new(false);
+
+    /// Initialize the IME engine
+    pub fn init_engine() {
+        let mut engine = ENGINE.lock().unwrap();
+        if engine.is_none() {
+            *engine = Some(Engine::new());
+        }
+    }
+
+    /// Start the keyboard hook (requires Accessibility permission)
+    /// NOTE: User must grant Accessibility API access in System Settings > Privacy & Security > Accessibility
+    pub fn start_hook() {
+        if HOOK_RUNNING.load(Ordering::SeqCst) {
+            return;
+        }
+        
+        init_engine();
+        HOOK_RUNNING.store(true, Ordering::SeqCst);
+        
+        // CGEventTap implementation placeholder
+        // Full implementation requires:
+        // 1. CGEventTapCreate with kCGEventKeyDown/kCGEventKeyUp
+        // 2. CGEventTapEnable 
+        // 3. CFRunLoopAddSource
+        // 4. CFRunLoopRun in background thread
+        eprintln!("macOS keyboard hook: CGEventTap setup required. Grant Accessibility permission in System Settings.");
+    }
+
+    pub fn stop_hook() {
+        HOOK_RUNNING.store(false, Ordering::SeqCst);
+    }
+
+    pub fn toggle_ime() -> bool {
+        let mut engine = ENGINE.lock().unwrap();
+        if let Some(ref mut e) = *engine {
+            e.toggle();
+            e.is_enabled()
+        } else {
+            false
+        }
+    }
+
+    pub fn is_enabled() -> bool {
+        let engine = ENGINE.lock().unwrap();
+        engine.as_ref().map(|e| e.is_enabled()).unwrap_or(true)
+    }
+
+    pub fn set_method(method: &str) {
+        let mut engine = ENGINE.lock().unwrap();
+        if let Some(ref mut e) = *engine { e.set_method(method); }
+    }
+
+    pub fn get_method() -> String {
+        ENGINE.lock().unwrap().as_ref().map(|e| e.get_method().to_string()).unwrap_or_else(|| "telex".to_string())
+    }
+
+    pub fn set_options(auto_capitalize: bool, smart_quotes: bool, spell_check: bool) {
+        let mut engine = ENGINE.lock().unwrap();
+        if let Some(ref mut e) = *engine { e.set_options(auto_capitalize, smart_quotes, spell_check); }
+    }
+
+    pub fn get_options() -> (bool, bool, bool) {
+        ENGINE.lock().unwrap().as_ref().map(|e| e.get_options()).unwrap_or((true, false, true))
+    }
+
+    pub fn get_shortcuts() -> Vec<vietflux_core::shortcut::Shortcut> {
+        ENGINE.lock().unwrap().as_ref().map(|e| e.get_shortcuts()).unwrap_or_default()
+    }
+
+    pub fn add_shortcut(trigger: &str, replacement: &str) {
+        let mut engine = ENGINE.lock().unwrap();
+        if let Some(ref mut e) = *engine { e.add_shortcut(trigger, replacement); }
+    }
+
+    pub fn remove_shortcut(trigger: &str) {
+        let mut engine = ENGINE.lock().unwrap();
+        if let Some(ref mut e) = *engine { e.remove_shortcut(trigger); }
+    }
+
+    pub fn toggle_shortcut(trigger: &str) {
+        let mut engine = ENGINE.lock().unwrap();
+        if let Some(ref mut e) = *engine { e.toggle_shortcut(trigger); }
+    }
+
+    pub fn clear() {
+        let mut engine = ENGINE.lock().unwrap();
+        if let Some(ref mut e) = *engine { e.clear(); }
+    }
+}
+
+#[cfg(target_os = "macos")]
+pub use macos_impl::*;
+
+// ============================================================
+// LINUX STUB (ibus/fcitx integration needed)
+// ============================================================
+#[cfg(target_os = "linux")]
+mod linux_impl {
+    use std::sync::Mutex;
+    use vietflux_core::Engine;
+
+    static ENGINE: Mutex<Option<Engine>> = Mutex::new(None);
+
+    pub fn start_hook() {
+        eprintln!("Linux: ibus/fcitx integration required. See: https://github.com/niccokunzmann/rust-ibus");
+        let mut engine = ENGINE.lock().unwrap();
+        if engine.is_none() { *engine = Some(Engine::new()); }
+    }
+    pub fn stop_hook() {}
+    pub fn toggle_ime() -> bool { ENGINE.lock().unwrap().as_mut().map(|e| { e.toggle(); e.is_enabled() }).unwrap_or(false) }
+    pub fn is_enabled() -> bool { ENGINE.lock().unwrap().as_ref().map(|e| e.is_enabled()).unwrap_or(false) }
+    pub fn set_method(method: &str) { ENGINE.lock().unwrap().as_mut().map(|e| e.set_method(method)); }
+    pub fn get_method() -> String { ENGINE.lock().unwrap().as_ref().map(|e| e.get_method().to_string()).unwrap_or_else(|| "telex".to_string()) }
+    pub fn set_options(auto_capitalize: bool, smart_quotes: bool, spell_check: bool) { ENGINE.lock().unwrap().as_mut().map(|e| e.set_options(auto_capitalize, smart_quotes, spell_check)); }
+    pub fn get_options() -> (bool, bool, bool) { ENGINE.lock().unwrap().as_ref().map(|e| e.get_options()).unwrap_or((true, false, true)) }
+    pub fn get_shortcuts() -> Vec<vietflux_core::shortcut::Shortcut> { ENGINE.lock().unwrap().as_ref().map(|e| e.get_shortcuts()).unwrap_or_default() }
+    pub fn add_shortcut(trigger: &str, replacement: &str) { ENGINE.lock().unwrap().as_mut().map(|e| e.add_shortcut(trigger, replacement)); }
+    pub fn remove_shortcut(trigger: &str) { ENGINE.lock().unwrap().as_mut().map(|e| e.remove_shortcut(trigger)); }
+    pub fn toggle_shortcut(trigger: &str) { ENGINE.lock().unwrap().as_mut().map(|e| e.toggle_shortcut(trigger)); }
+    pub fn clear() { ENGINE.lock().unwrap().as_mut().map(|e| e.clear()); }
+}
+
+#[cfg(target_os = "linux")]
+pub use linux_impl::*;
+
+// Stub for other platforms (iOS, Android, etc.)
+#[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
 pub fn start_hook() {
     eprintln!("Keyboard hook not implemented for this platform");
 }
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
 pub fn stop_hook() {}
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
 pub fn toggle_ime() -> bool {
     false
 }
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
 pub fn is_enabled() -> bool {
     false
 }
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
 pub fn set_method(_method: &str) {}
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
 pub fn get_method() -> String {
     "telex".to_string()
 }
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
 pub fn set_options(_auto_capitalize: bool, _smart_quotes: bool, _spell_check: bool) {}
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
 pub fn get_options() -> (bool, bool, bool) {
     (true, false, true)
 }
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
 pub fn get_shortcuts() -> Vec<vietflux_core::shortcut::Shortcut> {
     Vec::new()
 }
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
 pub fn add_shortcut(_trigger: &str, _replacement: &str) {}
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
 pub fn remove_shortcut(_trigger: &str) {}
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
 pub fn toggle_shortcut(_trigger: &str) {}
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
 pub fn clear() {}
+

@@ -32,8 +32,7 @@ pub const VALID_VOWEL_PATTERNS: &[&str] = &[
     // Triphthongs (nguyên âm ba)
     "iêu", "oai", "oay", "oeo", "uây", "uôi", "ươi", "ươu", "yêu",
     // With qu- prefix patterns
-    "uya", "uyê", "uyu",
-    // Special triphthongs (from GoNhanh analysis)
+    "uya", "uyê", "uyu", // Special triphthongs
     "uêu", // nguều ngoào
     "oao", // ngoào
 ];
@@ -144,7 +143,7 @@ pub fn is_valid_syllable(s: &str) -> bool {
 }
 
 /// Check if pattern looks like a foreign/English word
-/// Based on 8 patterns from GoNhanh auto-restore analysis
+/// Based on 8 English auto-restore patterns
 pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool {
     let lower = buffer.to_lowercase();
     let chars: Vec<char> = lower.chars().collect();
@@ -161,7 +160,7 @@ pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool
     }
 
     // ============================================================
-    // 8 ENGLISH AUTO-RESTORE PATTERNS (from GoNhanh analysis)
+    // 8 ENGLISH AUTO-RESTORE PATTERNS
     // ============================================================
 
     // PATTERN 1: MODIFIER + CONSONANT (not sonorant)
@@ -659,7 +658,7 @@ mod tests {
 
     #[test]
     fn test_new_triphthongs() {
-        // New triphthong patterns from GoNhanh analysis
+        // Additional triphthong patterns
         assert!(is_valid_syllable("khuỷu")); // khuỷu tay (elbow) - pattern uyu
         assert!(is_valid_syllable("nguều")); // nguều ngoào - pattern uêu
         assert!(is_valid_syllable("ngoào")); // ngoào - pattern oao

@@ -152,7 +152,7 @@ pub fn find_tone_position_styled(
         return None;
     }
 
-    // Check for gi/qu initials (GoNhanh rule)
+    // Check for gi/qu initials
     // If word starts with "gi" or "qu" and has multiple vowels,
     // the first vowel (i/u) is treated as consonant/glide.
     let word: String = chars.iter().collect();
