@@ -9,6 +9,8 @@
 //! - Smart diacritic placement
 //! - Zero-copy buffer management
 //!
+#![allow(clippy::option_if_let_else)]
+
 //! # Usage (JavaScript/WASM)
 //! ```javascript
 //! import init, { VietFlux } from 'vietflux-core';

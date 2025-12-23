@@ -156,15 +156,13 @@ pub fn is_consonant(c: char) -> bool {
 
 /// Get the base form of a Vietnamese character
 pub fn get_base(c: char) -> char {
-    if let Some(&(base, _, _)) = REVERSE_MAP.get(&c.to_ascii_lowercase()) {
+    REVERSE_MAP.get(&c.to_ascii_lowercase()).map_or(c, |&(base, _, _)| {
         if c.is_uppercase() {
             base.to_ascii_uppercase()
         } else {
             base
         }
-    } else {
-        c
-    }
+    })
 }
 
 /// Get character with new tone mark

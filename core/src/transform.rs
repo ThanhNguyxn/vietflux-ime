@@ -62,6 +62,7 @@ pub fn apply_modifier(ch: char, modifier: VowelMod) -> Option<char> {
 }
 
 /// Remove all diacritics from a character
+#[allow(clippy::option_if_let_else)]
 pub fn remove_diacritics(ch: char) -> char {
     let lower = ch.to_ascii_lowercase();
 
@@ -95,21 +96,17 @@ pub fn toggle_stroke(ch: char) -> char {
 /// Get the current tone of a character
 pub fn get_tone(ch: char) -> ToneMark {
     let lower = ch.to_ascii_lowercase();
-    if let Some(&(_, _, tone)) = REVERSE_MAP.get(&lower) {
-        tone
-    } else {
-        ToneMark::None
-    }
+    REVERSE_MAP
+        .get(&lower)
+        .map_or(ToneMark::None, |&(_, _, tone)| tone)
 }
 
 /// Get the current modifier of a character
 pub fn get_modifier(ch: char) -> VowelMod {
     let lower = ch.to_ascii_lowercase();
-    if let Some(&(_, modifier, _)) = REVERSE_MAP.get(&lower) {
-        modifier
-    } else {
-        VowelMod::None
-    }
+    REVERSE_MAP
+        .get(&lower)
+        .map_or(VowelMod::None, |&(_, modifier, _)| modifier)
 }
 
 /// Check if character has any tone mark

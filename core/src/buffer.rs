@@ -107,13 +107,11 @@ impl Buffer {
 
     /// Replace character at index
     pub fn replace(&mut self, index: usize, ch: char) -> bool {
-        if let Some(bc) = self.chars.get_mut(index) {
+        self.chars.get_mut(index).map_or(false, |bc| {
             bc.ch = ch;
             bc.transformed = true;
             true
-        } else {
-            false
-        }
+        })
     }
 
     /// Get the transformed text
