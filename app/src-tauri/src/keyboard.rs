@@ -53,12 +53,8 @@ mod windows_impl {
         std::thread::spawn(|| {
             unsafe {
                 // For WH_KEYBOARD_LL, hMod can be None as hook runs in current process
-                let hook_result: windows::core::Result<HHOOK> = SetWindowsHookExW(
-                    WH_KEYBOARD_LL,
-                    Some(keyboard_hook_callback),
-                    None,
-                    0,
-                );
+                let hook_result: windows::core::Result<HHOOK> =
+                    SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_hook_callback), None, 0);
 
                 if let Ok(hook) = hook_result {
                     HOOK_HANDLE.store(hook.0 as usize, Ordering::SeqCst);
@@ -267,7 +263,7 @@ mod windows_impl {
 
         let base = match vk.0 {
             0x41..=0x5A => Some(((vk.0 - 0x41) as u8 + b'a') as char), // A-Z
-            0x20 => Some(' '),                                  // Space
+            0x20 => Some(' '),                                         // Space
             _ => None,
         };
 
@@ -304,15 +300,20 @@ mod windows_impl {
         if let Some(result) = result {
             use vietflux_core::engine::Action;
 
-            println!("Engine result: action={:?}, backspace={}, output='{}'", 
-                     result.action, result.backspace, result.output);
+            println!(
+                "Engine result: action={:?}, backspace={}, output='{}'",
+                result.action, result.backspace, result.output
+            );
 
             match result.action {
                 Action::Update => {
                     // ONLY block and replace if there's actual transformation
                     // i.e., we need to send backspaces OR output differs from just adding the char
                     if result.backspace > 0 {
-                        println!("Transformation: sending {} backspaces + '{}'", result.backspace, result.output);
+                        println!(
+                            "Transformation: sending {} backspaces + '{}'",
+                            result.backspace, result.output
+                        );
                         send_backspaces(result.backspace);
                         send_unicode_text(&result.output);
                         IS_PROCESSING.store(false, Ordering::SeqCst);
@@ -332,7 +333,10 @@ mod windows_impl {
                 Action::Restore => {
                     // Restore ASCII - need to replace
                     if result.backspace > 0 {
-                        println!("Restore: sending {} backspaces + '{}'", result.backspace, result.output);
+                        println!(
+                            "Restore: sending {} backspaces + '{}'",
+                            result.backspace, result.output
+                        );
                         send_backspaces(result.backspace);
                         send_unicode_text(&result.output);
                         IS_PROCESSING.store(false, Ordering::SeqCst);
@@ -442,15 +446,18 @@ pub use windows_impl::*;
 // ============================================================
 #[cfg(target_os = "macos")]
 mod macos_impl {
+    use core_foundation::runloop::{kCFRunLoopCommonModes, CFRunLoop};
+    use core_graphics::event::{
+        CGEvent, CGEventFlags, CGEventTap, CGEventTapLocation, CGEventTapOptions,
+        CGEventTapPlacement, CGEventType,
+    };
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Mutex;
     use vietflux_core::Engine;
-    use core_graphics::event::{CGEvent, CGEventFlags, CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType};
-    use core_foundation::runloop::{CFRunLoop, kCFRunLoopCommonModes};
 
     /// Global engine instance
     static ENGINE: Mutex<Option<Engine>> = Mutex::new(None);
-    
+
     /// Hook running state  
     static HOOK_RUNNING: AtomicBool = AtomicBool::new(false);
 
@@ -465,20 +472,227 @@ mod macos_impl {
     /// Start the keyboard hook (requires Accessibility permission)
     /// NOTE: User must grant Accessibility API access in System Settings > Privacy & Security > Accessibility
     pub fn start_hook() {
+        use core_graphics::event::{
+            CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
+        };
+        use std::ffi::c_void;
+        use std::thread;
+
         if HOOK_RUNNING.load(Ordering::SeqCst) {
             return;
         }
-        
+
         init_engine();
         HOOK_RUNNING.store(true, Ordering::SeqCst);
-        
-        // CGEventTap implementation placeholder
-        // Full implementation requires:
-        // 1. CGEventTapCreate with kCGEventKeyDown/kCGEventKeyUp
-        // 2. CGEventTapEnable 
-        // 3. CFRunLoopAddSource
-        // 4. CFRunLoopRun in background thread
-        eprintln!("macOS keyboard hook: CGEventTap setup required. Grant Accessibility permission in System Settings.");
+
+        // Spawn background thread for event tap
+        thread::spawn(|| {
+            unsafe {
+                // Event mask for key events
+                let event_mask =
+                    (1 << CGEventType::KeyDown as u64) | (1 << CGEventType::KeyUp as u64);
+
+                // Create event tap
+                // Note: This requires Accessibility permission
+                let tap = core_graphics::event::CGEventTapCreate(
+                    CGEventTapLocation::HID,
+                    CGEventTapPlacement::HeadInsertEventTap,
+                    CGEventTapOptions::Default,
+                    event_mask,
+                    keyboard_callback,
+                    std::ptr::null_mut(),
+                );
+
+                if tap.is_null() {
+                    eprintln!("VietFlux: Failed to create CGEventTap. Please grant Accessibility permission in System Settings > Privacy & Security > Accessibility");
+                    HOOK_RUNNING.store(false, Ordering::SeqCst);
+                    return;
+                }
+
+                // Create run loop source
+                let source = core_foundation::runloop::CFMachPortCreateRunLoopSource(
+                    core_foundation::base::kCFAllocatorDefault,
+                    tap,
+                    0,
+                );
+
+                if source.is_null() {
+                    eprintln!("VietFlux: Failed to create run loop source");
+                    HOOK_RUNNING.store(false, Ordering::SeqCst);
+                    return;
+                }
+
+                // Add to current run loop
+                let run_loop = CFRunLoop::get_current();
+                core_foundation::runloop::CFRunLoopAddSource(
+                    run_loop.as_concrete_TypeRef(),
+                    source,
+                    core_foundation::runloop::kCFRunLoopCommonModes,
+                );
+
+                // Enable the tap
+                core_graphics::event::CGEventTapEnable(tap, true);
+
+                eprintln!("VietFlux: macOS keyboard hook started");
+
+                // Run until stopped
+                while HOOK_RUNNING.load(Ordering::SeqCst) {
+                    core_foundation::runloop::CFRunLoopRunInMode(
+                        core_foundation::runloop::kCFRunLoopDefaultMode,
+                        0.1,
+                        false,
+                    );
+                }
+
+                // Cleanup
+                core_graphics::event::CGEventTapEnable(tap, false);
+            }
+        });
+    }
+
+    /// Keyboard callback for CGEventTap
+    extern "C" fn keyboard_callback(
+        _proxy: core_graphics::event::CGEventTapProxy,
+        event_type: core_graphics::event::CGEventType,
+        event: core_graphics::event::CGEventRef,
+        _user_info: *mut std::ffi::c_void,
+    ) -> core_graphics::event::CGEventRef {
+        use core_graphics::event::CGEventType;
+
+        // Only process key down events
+        if event_type != CGEventType::KeyDown {
+            return event;
+        }
+
+        unsafe {
+            // Get key code
+            let keycode = core_graphics::event::CGEventGetIntegerValueField(
+                event,
+                core_graphics::event::CGEventField::KeyboardEventKeycode,
+            ) as u16;
+
+            // Convert keycode to char (simplified - full mapping needed)
+            let key_char = keycode_to_char(keycode);
+
+            if let Some(ch) = key_char {
+                let mut engine = ENGINE.lock().unwrap();
+                if let Some(ref mut e) = *engine {
+                    let result = e.process_key(ch, false);
+
+                    // If engine wants to update, we need to handle backspaces and output
+                    if result.action == vietflux_core::Action::Update {
+                        // Send backspaces
+                        for _ in 0..result.backspace {
+                            send_backspace();
+                        }
+                        // Send output characters
+                        for c in result.output.chars() {
+                            send_char(c);
+                        }
+                        // Block original event by returning null
+                        return std::ptr::null_mut();
+                    }
+                }
+            }
+        }
+
+        event
+    }
+
+    /// Convert macOS keycode to character (basic mapping)
+    fn keycode_to_char(keycode: u16) -> Option<char> {
+        // macOS keycodes (QWERTY layout)
+        match keycode {
+            0 => Some('a'),
+            1 => Some('s'),
+            2 => Some('d'),
+            3 => Some('f'),
+            4 => Some('h'),
+            5 => Some('g'),
+            6 => Some('z'),
+            7 => Some('x'),
+            8 => Some('c'),
+            9 => Some('v'),
+            11 => Some('b'),
+            12 => Some('q'),
+            13 => Some('w'),
+            14 => Some('e'),
+            15 => Some('r'),
+            16 => Some('y'),
+            17 => Some('t'),
+            18 => Some('1'),
+            19 => Some('2'),
+            20 => Some('3'),
+            21 => Some('4'),
+            22 => Some('6'),
+            23 => Some('5'),
+            24 => Some('='),
+            25 => Some('9'),
+            26 => Some('7'),
+            27 => Some('-'),
+            28 => Some('8'),
+            29 => Some('0'),
+            31 => Some('o'),
+            32 => Some('u'),
+            34 => Some('i'),
+            35 => Some('p'),
+            37 => Some('l'),
+            38 => Some('j'),
+            40 => Some('k'),
+            45 => Some('n'),
+            46 => Some('m'),
+            49 => Some(' '), // Space
+            _ => None,
+        }
+    }
+
+    /// Send a backspace key event
+    fn send_backspace() {
+        unsafe {
+            if let Some(event) = core_graphics::event::CGEvent::new_keyboard_event(
+                core_graphics::event::CGEventSource::new(
+                    core_graphics::event::CGEventSourceStateID::HIDSystemState,
+                )
+                .ok(),
+                51, // Backspace keycode
+                true,
+            ) {
+                event.post(core_graphics::event::CGEventTapLocation::HID);
+            }
+            if let Some(event) = core_graphics::event::CGEvent::new_keyboard_event(
+                core_graphics::event::CGEventSource::new(
+                    core_graphics::event::CGEventSourceStateID::HIDSystemState,
+                )
+                .ok(),
+                51,
+                false,
+            ) {
+                event.post(core_graphics::event::CGEventTapLocation::HID);
+            }
+        }
+    }
+
+    /// Send a character
+    fn send_char(ch: char) {
+        use core_graphics::event::{
+            CGEvent, CGEventSource, CGEventSourceStateID, CGEventTapLocation,
+        };
+
+        unsafe {
+            if let Some(source) = CGEventSource::new(CGEventSourceStateID::HIDSystemState).ok() {
+                // Create keyboard event for the character
+                if let Some(event) = CGEvent::new_keyboard_event(Some(source.clone()), 0, true) {
+                    // Set the Unicode string
+                    let chars: Vec<u16> = ch.encode_utf16().collect();
+                    core_graphics::event::CGEventKeyboardSetUnicodeString(
+                        event.as_ptr(),
+                        chars.len(),
+                        chars.as_ptr(),
+                    );
+                    event.post(CGEventTapLocation::HID);
+                }
+            }
+        }
     }
 
     pub fn stop_hook() {
@@ -502,44 +716,71 @@ mod macos_impl {
 
     pub fn set_method(method: &str) {
         let mut engine = ENGINE.lock().unwrap();
-        if let Some(ref mut e) = *engine { e.set_method(method); }
+        if let Some(ref mut e) = *engine {
+            e.set_method(method);
+        }
     }
 
     pub fn get_method() -> String {
-        ENGINE.lock().unwrap().as_ref().map(|e| e.get_method().to_string()).unwrap_or_else(|| "telex".to_string())
+        ENGINE
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|e| e.get_method().to_string())
+            .unwrap_or_else(|| "telex".to_string())
     }
 
     pub fn set_options(auto_capitalize: bool, smart_quotes: bool, spell_check: bool) {
         let mut engine = ENGINE.lock().unwrap();
-        if let Some(ref mut e) = *engine { e.set_options(auto_capitalize, smart_quotes, spell_check); }
+        if let Some(ref mut e) = *engine {
+            e.set_options(auto_capitalize, smart_quotes, spell_check);
+        }
     }
 
     pub fn get_options() -> (bool, bool, bool) {
-        ENGINE.lock().unwrap().as_ref().map(|e| e.get_options()).unwrap_or((true, false, true))
+        ENGINE
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|e| e.get_options())
+            .unwrap_or((true, false, true))
     }
 
     pub fn get_shortcuts() -> Vec<vietflux_core::shortcut::Shortcut> {
-        ENGINE.lock().unwrap().as_ref().map(|e| e.get_shortcuts()).unwrap_or_default()
+        ENGINE
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|e| e.get_shortcuts())
+            .unwrap_or_default()
     }
 
     pub fn add_shortcut(trigger: &str, replacement: &str) {
         let mut engine = ENGINE.lock().unwrap();
-        if let Some(ref mut e) = *engine { e.add_shortcut(trigger, replacement); }
+        if let Some(ref mut e) = *engine {
+            e.add_shortcut(trigger, replacement);
+        }
     }
 
     pub fn remove_shortcut(trigger: &str) {
         let mut engine = ENGINE.lock().unwrap();
-        if let Some(ref mut e) = *engine { e.remove_shortcut(trigger); }
+        if let Some(ref mut e) = *engine {
+            e.remove_shortcut(trigger);
+        }
     }
 
     pub fn toggle_shortcut(trigger: &str) {
         let mut engine = ENGINE.lock().unwrap();
-        if let Some(ref mut e) = *engine { e.toggle_shortcut(trigger); }
+        if let Some(ref mut e) = *engine {
+            e.toggle_shortcut(trigger);
+        }
     }
 
     pub fn clear() {
         let mut engine = ENGINE.lock().unwrap();
-        if let Some(ref mut e) = *engine { e.clear(); }
+        if let Some(ref mut e) = *engine {
+            e.clear();
+        }
     }
 }
 
@@ -559,20 +800,92 @@ mod linux_impl {
     pub fn start_hook() {
         eprintln!("Linux: ibus/fcitx integration required. See: https://github.com/niccokunzmann/rust-ibus");
         let mut engine = ENGINE.lock().unwrap();
-        if engine.is_none() { *engine = Some(Engine::new()); }
+        if engine.is_none() {
+            *engine = Some(Engine::new());
+        }
     }
     pub fn stop_hook() {}
-    pub fn toggle_ime() -> bool { ENGINE.lock().unwrap().as_mut().map(|e| { e.toggle(); e.is_enabled() }).unwrap_or(false) }
-    pub fn is_enabled() -> bool { ENGINE.lock().unwrap().as_ref().map(|e| e.is_enabled()).unwrap_or(false) }
-    pub fn set_method(method: &str) { ENGINE.lock().unwrap().as_mut().map(|e| e.set_method(method)); }
-    pub fn get_method() -> String { ENGINE.lock().unwrap().as_ref().map(|e| e.get_method().to_string()).unwrap_or_else(|| "telex".to_string()) }
-    pub fn set_options(auto_capitalize: bool, smart_quotes: bool, spell_check: bool) { ENGINE.lock().unwrap().as_mut().map(|e| e.set_options(auto_capitalize, smart_quotes, spell_check)); }
-    pub fn get_options() -> (bool, bool, bool) { ENGINE.lock().unwrap().as_ref().map(|e| e.get_options()).unwrap_or((true, false, true)) }
-    pub fn get_shortcuts() -> Vec<vietflux_core::shortcut::Shortcut> { ENGINE.lock().unwrap().as_ref().map(|e| e.get_shortcuts()).unwrap_or_default() }
-    pub fn add_shortcut(trigger: &str, replacement: &str) { ENGINE.lock().unwrap().as_mut().map(|e| e.add_shortcut(trigger, replacement)); }
-    pub fn remove_shortcut(trigger: &str) { ENGINE.lock().unwrap().as_mut().map(|e| e.remove_shortcut(trigger)); }
-    pub fn toggle_shortcut(trigger: &str) { ENGINE.lock().unwrap().as_mut().map(|e| e.toggle_shortcut(trigger)); }
-    pub fn clear() { ENGINE.lock().unwrap().as_mut().map(|e| e.clear()); }
+    pub fn toggle_ime() -> bool {
+        ENGINE
+            .lock()
+            .unwrap()
+            .as_mut()
+            .map(|e| {
+                e.toggle();
+                e.is_enabled()
+            })
+            .unwrap_or(false)
+    }
+    pub fn is_enabled() -> bool {
+        ENGINE
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|e| e.is_enabled())
+            .unwrap_or(false)
+    }
+    pub fn set_method(method: &str) {
+        ENGINE
+            .lock()
+            .unwrap()
+            .as_mut()
+            .map(|e| e.set_method(method));
+    }
+    pub fn get_method() -> String {
+        ENGINE
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|e| e.get_method().to_string())
+            .unwrap_or_else(|| "telex".to_string())
+    }
+    pub fn set_options(auto_capitalize: bool, smart_quotes: bool, spell_check: bool) {
+        ENGINE
+            .lock()
+            .unwrap()
+            .as_mut()
+            .map(|e| e.set_options(auto_capitalize, smart_quotes, spell_check));
+    }
+    pub fn get_options() -> (bool, bool, bool) {
+        ENGINE
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|e| e.get_options())
+            .unwrap_or((true, false, true))
+    }
+    pub fn get_shortcuts() -> Vec<vietflux_core::shortcut::Shortcut> {
+        ENGINE
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|e| e.get_shortcuts())
+            .unwrap_or_default()
+    }
+    pub fn add_shortcut(trigger: &str, replacement: &str) {
+        ENGINE
+            .lock()
+            .unwrap()
+            .as_mut()
+            .map(|e| e.add_shortcut(trigger, replacement));
+    }
+    pub fn remove_shortcut(trigger: &str) {
+        ENGINE
+            .lock()
+            .unwrap()
+            .as_mut()
+            .map(|e| e.remove_shortcut(trigger));
+    }
+    pub fn toggle_shortcut(trigger: &str) {
+        ENGINE
+            .lock()
+            .unwrap()
+            .as_mut()
+            .map(|e| e.toggle_shortcut(trigger));
+    }
+    pub fn clear() {
+        ENGINE.lock().unwrap().as_mut().map(|e| e.clear());
+    }
 }
 
 #[cfg(target_os = "linux")]
@@ -629,4 +942,3 @@ pub fn toggle_shortcut(_trigger: &str) {}
 
 #[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
 pub fn clear() {}
-
