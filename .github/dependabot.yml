@@ -1,51 +1,43 @@
-# Dependabot configuration
-# Keeps dependencies up to date automatically
-
 version: 2
 updates:
-  # Rust dependencies (Core)
-  - package-ecosystem: "cargo"
-    directory: "/core"
-    schedule:
-      interval: "weekly"
-    commit-message:
-      prefix: "deps(core)"
-    labels:
-      - "dependencies"
-      - "core"
-    open-pull-requests-limit: 5
-
-  # Rust dependencies (App)
-  - package-ecosystem: "cargo"
-    directory: "/app/src-tauri"
-    schedule:
-      interval: "weekly"
-    commit-message:
-      prefix: "deps(app)"
-    labels:
-      - "dependencies"
-      - "app"
-    open-pull-requests-limit: 5
-
-  # NPM dependencies (App)
-  - package-ecosystem: "npm"
-    directory: "/app/src-tauri"
-    schedule:
-      interval: "weekly"
-    commit-message:
-      prefix: "deps(npm)"
-    labels:
-      - "dependencies"
-      - "npm"
-    open-pull-requests-limit: 5
-
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-    commit-message:
-      prefix: "deps(ci)"
-    labels:
-      - "dependencies"
-      - "ci"
+      interval: "daily"
+    open-pull-requests-limit: 10
+
+  # Core Rust Crate
+  - package-ecosystem: "cargo"
+    directory: "/core"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 10
+
+  # Tauri App (Rust)
+  - package-ecosystem: "cargo"
+    directory: "/app/src-tauri"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 10
+
+  # Frontend (NPM)
+  - package-ecosystem: "npm"
+    directory: "/app"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 10
+
+  # Analysis (NPM)
+  - package-ecosystem: "npm"
+    directory: "/analysis"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 10
+
+  # Analysis (Rust)
+  - package-ecosystem: "cargo"
+    directory: "/analysis/core"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 10

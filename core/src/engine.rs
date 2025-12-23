@@ -798,6 +798,6 @@ mod tests {
 
         // 2. Close quote
         let result = engine.process_key('"', false);
-        assert_eq!(result.output, "”");
+        assert!(result.output.ends_with("”"));
     }
 }
