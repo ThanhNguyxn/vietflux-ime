@@ -725,6 +725,7 @@ mod tests {
     #[test]
     fn test_shortcut_expansion() {
         let mut engine = Engine::new();
+        engine.set_options(false, false, false); // Disable auto-cap
 
         engine.process_key('k', false);
         engine.process_key('o', false);
@@ -781,10 +782,10 @@ mod tests {
         engine.process_key('i', false);
 
         // 2. Sentence end
-        let result = engine.process_key('.', false); // "Hi."
+        let _ = engine.process_key('.', false); // "Hi."
         assert!(engine.next_char_upper);
 
-        let result = engine.process_key(' ', false); // "Hi. "
+        let _ = engine.process_key(' ', false); // "Hi. "
         assert!(engine.next_char_upper);
 
         let result = engine.process_key('t', false); // "Hi. T"
