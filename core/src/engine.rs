@@ -667,6 +667,7 @@ mod tests {
     #[test]
     fn test_telex_basic() {
         let mut engine = Engine::new();
+        engine.set_options(false, false, false);
         engine.set_method("telex");
 
         engine.process_key('v', false);
@@ -680,6 +681,7 @@ mod tests {
     #[test]
     fn test_telex_tone() {
         let mut engine = Engine::new();
+        engine.set_options(false, false, false);
         engine.set_method("telex");
 
         engine.process_key('a', false);
@@ -691,6 +693,7 @@ mod tests {
     #[test]
     fn test_telex_circumflex() {
         let mut engine = Engine::new();
+        engine.set_options(false, false, false);
         engine.set_method("telex");
 
         engine.process_key('a', false);
@@ -702,6 +705,7 @@ mod tests {
     #[test]
     fn test_double_mark_undo() {
         let mut engine = Engine::new();
+        engine.set_options(false, false, false);
         engine.set_method("telex");
 
         engine.process_key('a', false);
@@ -714,6 +718,7 @@ mod tests {
     #[test]
     fn test_vni_basic() {
         let mut engine = Engine::new();
+        engine.set_options(false, false, false);
         engine.set_method("vni");
 
         engine.process_key('a', false);
@@ -744,6 +749,7 @@ mod tests {
     #[test]
     fn test_shortcut_with_prefix() {
         let mut engine = Engine::new();
+        engine.set_options(false, false, false);
         engine.add_shortcut("#vn", "Việt Nam");
 
         // 1. Type prefix '#'
