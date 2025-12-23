@@ -39,17 +39,11 @@ impl InputMethod for Telex {
             }
 
             // w = horn (ơ, ư) or breve (ă)
-            'w' => {
-                if let Some(prev) = prev_char {
-                    match prev.to_ascii_lowercase() {
-                        'a' => KeyAction::Modifier(VowelMod::Breve), // aw = ă
-                        'o' | 'u' => KeyAction::Modifier(VowelMod::Horn), // ow=ơ, uw=ư
-                        _ => KeyAction::None,
-                    }
-                } else {
-                    KeyAction::None
-                }
-            }
+            'w' => prev_char.map_or(KeyAction::None, |prev| match prev.to_ascii_lowercase() {
+                'a' => KeyAction::Modifier(VowelMod::Breve), // aw = ă
+                'o' | 'u' => KeyAction::Modifier(VowelMod::Horn), // ow=ơ, uw=ư
+                _ => KeyAction::None,
+            }),
 
             // dd = đ
             'd' => {

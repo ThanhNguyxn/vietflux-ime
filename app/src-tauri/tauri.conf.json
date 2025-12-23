@@ -1,13 +1,13 @@
 {
     "$schema": "https://schema.tauri.app/config/2",
     "productName": "VietFlux",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "identifier": "dev.vietflux.app",
     "build": {
-        "frontendDist": "../src",
-        "devUrl": "http://localhost:1420",
-        "beforeBuildCommand": "",
-        "beforeDevCommand": ""
+        "frontendDist": "../build",
+        "devUrl": "http://localhost:5173",
+        "beforeBuildCommand": "npm run build",
+        "beforeDevCommand": "npm run dev"
     },
     "app": {
         "withGlobalTauri": true,
@@ -17,7 +17,7 @@
                 "width": 400,
                 "height": 600,
                 "resizable": false,
-                "visible": false,
+                "visible": true,
                 "center": true,
                 "decorations": false,
                 "transparent": true
@@ -38,28 +38,11 @@
             "icons/icon.icns",
             "icons/icon.ico"
         ],
-        "shortDescription": "Vietnamese Input Method",
-        "longDescription": "High-performance Vietnamese Input Method Engine",
-        "category": "Utility",
-        "windows": {
-            "wix": {
-                "language": "en-US"
-            },
-            "nsis": {
-                "languages": [
-                    "English",
-                    "Vietnamese"
-                ],
-                "displayLanguageSelector": true
-            }
-        },
-        "macOS": {
-            "minimumSystemVersion": "10.13"
-        },
-        "linux": {
-            "appimage": {
-                "bundleMediaFramework": false
-            }
-        }
+        "resources": [],
+        "externalBin": [],
+        "copyright": "",
+        "category": "DeveloperTool",
+        "shortDescription": "",
+        "longDescription": ""
     }
 }

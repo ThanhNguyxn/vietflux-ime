@@ -3,6 +3,36 @@
 **/target/
 Cargo.lock
 
+# Node
+node_modules
+dist
+build
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Archives
+# Cleanup
+extracted_ui/
+new_ui_assets/
+extract_code.py
+*.zip
+*.log
+*.dll
+*.pdb
+*.exp
+*.lib
+test_log.txt
+clippy.log
+clippy_log.txt
+core/target/
+core/deps/
+core/incremental/
+*.tar.gz
+
 # WASM build outputs  
 /pkg
 *.wasm

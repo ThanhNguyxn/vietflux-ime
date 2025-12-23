@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VietFlux IME</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header data-tauri-drag-region>
+            <div class="brand" data-tauri-drag-region>
+                <div class="logo">V</div>
+                <div class="app-info">
+                    <div class="app-name">VietFlux</div>
+                    <span class="version" id="appVersion">v1.0.0</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="toggle-switch" id="mainToggle" title="Bật/Tắt bộ gõ (Ctrl+Shift)">
+                    <div class="toggle-thumb"></div>
+                </div>
+                <div class="window-controls">
+                    <button class="win-btn minimize" id="minimizeBtn" title="Thu nhỏ">−</button>
+                    <button class="win-btn close" id="closeBtn" title="Đóng">×</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Input Method Section -->
+            <div class="card">
+                <div class="section-header">
+                    <div class="section-title">Bộ gõ</div>
+                </div>
+                <div class="control-row">
+                    <span class="label">Kiểu gõ</span>
+                    <div class="segmented-control">
+                        <button class="segment-btn active" data-value="telex">Telex</button>
+                        <button class="segment-btn" data-value="vni">VNI</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shortcuts Section -->
+            <div class="card" style="flex: 1; display: flex; flex-direction: column;">
+                <div class="section-header" style="margin-bottom: 12px;">
+                    <div class="section-title" style="margin-bottom: 0;">Gõ tắt</div>
+                    <button class="btn-icon" id="addShortcutBtn" title="Thêm từ viết tắt">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="shortcut-list" id="shortcutList">
+                    <!-- Shortcuts will be injected here -->
+                </div>
+            </div>
+
+            <!-- Excluded Apps Section (Placeholder) -->
+            <div class="card">
+                <div class="section-header" style="margin-bottom: 12px;">
+                    <div class="section-title" style="margin-bottom: 0;">Ứng dụng loại trừ</div>
+                    <button class="btn-icon" title="Tính năng đang phát triển">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div style="padding: 8px; text-align: center; color: var(--text-muted); font-size: 13px;">
+                    Tính năng đang được cập nhật...
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer>
+            <button class="footer-btn" id="settingsBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                    </path>
+                </svg>
+                Cài đặt
+            </button>
+            <button class="footer-btn" id="hideBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                Ẩn xuống khay
+            </button>
+            <button class="footer-btn danger" id="quitBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                Kết thúc
+            </button>
+        </footer>
+    </div>
+
+    <!-- Add Shortcut Modal -->
+    <div class="modal-overlay" id="addShortcutModal">
+        <div class="modal">
+            <h3 style="margin-bottom: 20px; font-size: 18px; font-weight: 700;">Thêm từ viết tắt</h3>
+            <div class="input-group">
+                <label class="input-label">Từ tắt (ví dụ: vn)</label>
+                <input type="text" class="input-field" id="triggerInput" placeholder="Nhập từ tắt..."
+                    autocomplete="off">
+            </div>
+            <div class="input-group">
+                <label class="input-label">Cụm từ thay thế</label>
+                <input type="text" class="input-field" id="expansionInput" placeholder="Nhập cụm từ..."
+                    autocomplete="off">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" id="cancelAddBtn">Hủy</button>
+                <button class="btn btn-confirm" id="confirmAddBtn">Thêm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { invoke } = window.__TAURI__.core;
+        const { getCurrentWindow } = window.__TAURI__.window;
+        const { getVersion } = window.__TAURI__.app;
+
+        // State
+        let state = {
+            enabled: true,
+            method: 'telex',
+            shortcuts: []
+        };
+
+        // Elements
+        const mainToggle = document.getElementById('mainToggle');
+        const methodBtns = document.querySelectorAll('.segment-btn');
+        const shortcutList = document.getElementById('shortcutList');
+        const hideBtn = document.getElementById('hideBtn');
+        const minimizeBtn = document.getElementById('minimizeBtn');
+        const closeBtn = document.getElementById('closeBtn');
+        const addShortcutBtn = document.getElementById('addShortcutBtn');
+        const addShortcutModal = document.getElementById('addShortcutModal');
+        const cancelAddBtn = document.getElementById('cancelAddBtn');
+        const confirmAddBtn = document.getElementById('confirmAddBtn');
+        const triggerInput = document.getElementById('triggerInput');
+        const expansionInput = document.getElementById('expansionInput');
+        const appVersionEl = document.getElementById('appVersion');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const quitBtn = document.getElementById('quitBtn');
+        const addExcludedAppBtn = document.getElementById('addExcludedAppBtn');
+
+        // Render Functions
+        function renderUI() {
+            // Main Toggle
+            mainToggle.classList.toggle('active', state.enabled);
+
+            // Method Buttons
+            methodBtns.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.value === state.method);
+            });
+
+            // Shortcuts - use s.replacement (not s.expansion)
+            if (state.shortcuts.length === 0) {
+                shortcutList.innerHTML = `
+                    <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 30px 0;">
+                        <div style="font-size: 24px; margin-bottom: 8px; opacity: 0.5;">📝</div>
+                        Chưa có từ viết tắt nào
+                    </div>`;
+            } else {
+                shortcutList.innerHTML = state.shortcuts.map((s) => `
+                    <div class="shortcut-item">
+                        <div class="shortcut-content">
+                            <span class="trigger">${s.trigger}</span>
+                            <span class="arrow">→</span>
+                            <span class="expansion" title="${s.replacement}">${s.replacement}</span>
+                        </div>
+                        <div class="control-row" style="gap: 8px; margin: 0;">
+                            <div class="toggle-switch ${s.enabled ? 'active' : ''}" 
+                                 style="width: 36px; height: 20px;"
+                                 onclick="toggleShortcut('${s.trigger}')"
+                                 title="${s.enabled ? 'Tắt' : 'Bật'}">
+                                <div class="toggle-thumb" style="width: 16px; height: 16px;"></div>
+                            </div>
+                            <button class="btn-icon danger" onclick="deleteShortcut('${s.trigger}')" style="width: 28px; height: 28px;" title="Xóa">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Actions
+        window.toggleShortcut = async (trigger) => {
+            try {
+                state.shortcuts = await invoke('toggle_shortcut', { trigger });
+                renderUI();
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        window.deleteShortcut = async (trigger) => {
+            if (confirm(`Bạn có chắc muốn xóa từ tắt "${trigger}"?`)) {
+                try {
+                    state.shortcuts = await invoke('remove_shortcut', { trigger });
+                    renderUI();
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        };
+
+        // Modal Logic
+        addShortcutBtn.addEventListener('click', () => {
+            triggerInput.value = '';
+            expansionInput.value = '';
+            addShortcutModal.classList.add('active');
+            triggerInput.focus();
+        });
+
+        function closeModal() {
+            addShortcutModal.classList.remove('active');
+        }
+
+        cancelAddBtn.addEventListener('click', closeModal);
+
+        // Close modal on outside click
+        addShortcutModal.addEventListener('click', (e) => {
+            if (e.target === addShortcutModal) closeModal();
+        });
+
+        confirmAddBtn.addEventListener('click', async () => {
+            const trigger = triggerInput.value.trim();
+            const expansion = expansionInput.value.trim();
+
+            if (trigger && expansion) {
+                try {
+                    state.shortcuts = await invoke('add_shortcut', { trigger, expansion });
+                    renderUI();
+                    closeModal();
+                } catch (e) {
+                    console.error(e);
+                    alert('Lỗi khi thêm phím tắt: ' + e);
+                }
+            }
+        });
+
+        // Enter key in inputs
+        expansionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') confirmAddBtn.click();
+        });
+
+        // Event Listeners
+        mainToggle.addEventListener('click', async () => {
+            state.enabled = await invoke('toggle');
+            renderUI();
+        });
+
+        methodBtns.forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const method = btn.dataset.value;
+                await invoke('set_method', { method });
+                state.method = method;
+                renderUI();
+            });
+        });
+
+        // Window Controls
+        minimizeBtn.addEventListener('click', async () => {
+            await getCurrentWindow().minimize();
+        });
+
+        closeBtn.addEventListener('click', async () => {
+            // Close to tray (hide instead of quit)
+            await getCurrentWindow().hide();
+        });
+
+        hideBtn.addEventListener('click', async () => {
+            await getCurrentWindow().hide();
+        });
+
+        // Initialize
+        async function init() {
+            try {
+                // Load version from Tauri
+                const version = await getVersion();
+                appVersionEl.textContent = `v${version}`;
+
+                // Load initial state
+                state.method = await invoke('get_method');
+                state.shortcuts = await invoke('get_shortcuts');
+            } catch (e) {
+                console.error("Init error:", e);
+            }
+            renderUI();
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

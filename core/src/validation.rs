@@ -53,7 +53,7 @@ const INVALID_VOWEL_PATTERNS: &[&str] = &[
     "eư", "oư", "iư", // ư cannot follow e, o, i directly
     "ưe", "ưo", "ưy", // Invalid ư combinations
     "ou", "yo", // English-like patterns
-    "ea", "ie", "ei", // English diphthongs
+    "ea", "ei", // English diphthongs (NOT "ie" - that's valid: tiếp, tiếng)
 ];
 
 // ============================================================
@@ -83,6 +83,7 @@ impl ValidationResult {
 // ============================================================
 
 /// Full validation with detailed result
+#[allow(clippy::option_if_let_else)]
 pub fn validate(s: &str) -> ValidationResult {
     if s.is_empty() {
         return ValidationResult::NoVowel;
@@ -428,17 +429,16 @@ fn normalize_vowel(vowel: &str) -> String {
         .chars()
         .map(|c| {
             // Get the character with modifier but without tone
-            if let Some(&(base, modifier, _tone)) = chars::REVERSE_MAP.get(&c.to_ascii_lowercase())
-            {
-                // Look up character with same base+modifier but no tone
-                chars::CHAR_MAP
-                    .get(&(base, modifier, chars::ToneMark::None))
-                    .copied()
-                    .unwrap_or(base)
-            } else {
-                // Not a Vietnamese char, return as-is
-                c
-            }
+            // Get the character with modifier but without tone
+            chars::REVERSE_MAP
+                .get(&c.to_ascii_lowercase())
+                .map_or(c, |&(base, modifier, _tone)| {
+                    // Look up character with same base+modifier but no tone
+                    chars::CHAR_MAP
+                        .get(&(base, modifier, chars::ToneMark::None))
+                        .copied()
+                        .unwrap_or(base)
+                })
         })
         .collect()
 }
