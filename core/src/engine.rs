@@ -650,7 +650,7 @@ impl Engine {
     /// e.g., "cc" → "ch", "gg" → "gh", "nn" → "nh", etc.
     fn apply_quick_telex(&mut self, replacement: &str, _raw_key: char) -> ProcessResult {
         // Remove the first consonant (which was doubled)
-        if self.buffer.len() > 0 {
+        if !self.buffer.is_empty() {
             self.buffer.pop();
         }
 
