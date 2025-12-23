@@ -6,9 +6,7 @@ mod windows_impl {
     use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
     use std::sync::Mutex;
     use vietflux_core::Engine;
-    use windows::core::PCWSTR;
     use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
-    use windows::Win32::System::LibraryLoader::GetModuleHandleW;
     use windows::Win32::UI::Input::KeyboardAndMouse::{
         GetAsyncKeyState, GetKeyState, SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT,
         KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP, KEYEVENTF_UNICODE, VIRTUAL_KEY, VK_BACK, VK_CAPITAL,
@@ -54,12 +52,11 @@ mod windows_impl {
 
         std::thread::spawn(|| {
             unsafe {
-                let h_instance = GetModuleHandleW(PCWSTR::null()).unwrap_or_default();
-
+                // For WH_KEYBOARD_LL, hMod can be None as hook runs in current process
                 let hook_result: windows::core::Result<HHOOK> = SetWindowsHookExW(
                     WH_KEYBOARD_LL,
                     Some(keyboard_hook_callback),
-                    h_instance,
+                    None,
                     0,
                 );
 
@@ -245,9 +242,9 @@ mod windows_impl {
     unsafe fn call_next_hook(code: i32, w_param: WPARAM, l_param: LPARAM) -> LRESULT {
         let hook_ptr = HOOK_HANDLE.load(Ordering::SeqCst);
         let hook = if hook_ptr != 0 {
-            HHOOK(hook_ptr as *mut std::ffi::c_void)
+            Some(HHOOK(hook_ptr as *mut std::ffi::c_void))
         } else {
-            HHOOK::default()
+            None
         };
         CallNextHookEx(hook, code, w_param, l_param)
     }
