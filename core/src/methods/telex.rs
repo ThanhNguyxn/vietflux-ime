@@ -58,6 +58,27 @@ impl InputMethod for Telex {
             // z = remove diacritics
             'z' => KeyAction::RemoveDiacritics,
 
+            // Quick Telex: double consonant shortcuts
+            // cc→ch, gg→gh, kk→kh, nn→nh, pp→ph, tt→th, qq→qu
+            'c' | 'g' | 'k' | 'n' | 'p' | 't' | 'q' => {
+                if let Some(prev) = prev_char {
+                    if prev.to_ascii_lowercase() == key_lower {
+                        let replacement = match key_lower {
+                            'c' => "ch",
+                            'g' => "gh",
+                            'k' => "kh",
+                            'n' => "nh",
+                            'p' => "ph",
+                            't' => "th",
+                            'q' => "qu",
+                            _ => unreachable!(),
+                        };
+                        return KeyAction::QuickTelex(replacement);
+                    }
+                }
+                KeyAction::None
+            }
+
             _ => KeyAction::None,
         }
     }
@@ -119,5 +140,24 @@ mod tests {
     fn test_telex_stroke() {
         let telex = Telex;
         assert_eq!(telex.process('d', Some('d')), KeyAction::Stroke);
+    }
+
+    #[test]
+    fn test_telex_quick_telex() {
+        let telex = Telex;
+        // cc → ch
+        assert_eq!(telex.process('c', Some('c')), KeyAction::QuickTelex("ch"));
+        // gg → gh
+        assert_eq!(telex.process('g', Some('g')), KeyAction::QuickTelex("gh"));
+        // nn → nh
+        assert_eq!(telex.process('n', Some('n')), KeyAction::QuickTelex("nh"));
+        // pp → ph
+        assert_eq!(telex.process('p', Some('p')), KeyAction::QuickTelex("ph"));
+        // tt → th
+        assert_eq!(telex.process('t', Some('t')), KeyAction::QuickTelex("th"));
+        // qq → qu
+        assert_eq!(telex.process('q', Some('q')), KeyAction::QuickTelex("qu"));
+        // kk → kh
+        assert_eq!(telex.process('k', Some('k')), KeyAction::QuickTelex("kh"));
     }
 }

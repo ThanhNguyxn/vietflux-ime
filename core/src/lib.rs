@@ -1,7 +1,7 @@
 //! VietFlux IME Core Engine
 //!
 //! High-performance Vietnamese Input Method Engine with WebAssembly support.
-//! Inspired by UniKey and gonhanh.org with modern Rust implementation.
+//! Modern Rust implementation for Vietnamese input.
 //!
 //! # Features
 //! - Telex and VNI input methods

@@ -25,6 +25,8 @@ pub enum KeyAction {
     RemoveDiacritics,
     /// Undo last transformation
     Undo,
+    /// Quick Telex: expand double consonant (cc→ch, gg→gh, nn→nh, etc.)
+    QuickTelex(&'static str),
 }
 
 /// Input method trait

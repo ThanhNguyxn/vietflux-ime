@@ -282,6 +282,10 @@ impl Engine {
             KeyAction::RemoveDiacritics => self.remove_all_diacritics(),
 
             KeyAction::Undo => self.undo_last_transform(),
+
+            KeyAction::QuickTelex(replacement) => {
+                self.apply_quick_telex(replacement, key_to_process)
+            }
         }
     }
 
@@ -537,25 +541,64 @@ impl Engine {
         None
     }
 
-    /// Apply stroke (d → đ)
+    /// Apply stroke (d → đ) with delayed stroke logic
+    /// Based on smart stroke handling:
+    /// - Allow immediate stroke for short patterns (dd → đ, did → đi)
+    /// - Validate syllable structure before applying to prevent invalid transforms
     fn apply_stroke(&mut self) -> ProcessResult {
-        // Find last 'd' and convert to 'đ'
-        for i in (0..self.buffer.len()).rev() {
+        let chars: Vec<char> = self.buffer.iter().map(|bc| bc.ch).collect();
+
+        // Check if buffer has any vowels
+        let has_vowel = chars.iter().any(|&c| chars::is_vowel(c));
+
+        // Check if any character has a tone mark applied (confirms Vietnamese intent)
+        let has_mark = self.buffer.iter().any(|bc| {
+            let base = chars::get_base(bc.ch);
+            base != bc.ch // If base differs, there's a diacritic
+        });
+
+        // Find last 'd' position
+        let d_pos = (0..self.buffer.len()).rev().find(|&i| {
+            if let Some(bc) = self.buffer.get(i) {
+                bc.ch.eq_ignore_ascii_case(&'d') || bc.ch.eq_ignore_ascii_case(&'đ')
+            } else {
+                false
+            }
+        });
+
+        if let Some(i) = d_pos {
             if let Some(bc) = self.buffer.get(i) {
                 let ch = bc.ch;
-                if ch.eq_ignore_ascii_case(&'d') || ch.eq_ignore_ascii_case(&'đ') {
-                    let new_char = transform::toggle_stroke(ch);
-                    self.buffer.replace(i, new_char);
 
-                    self.last_transform = LastTransform {
-                        position: Some(i),
-                        transform_type: TransformType::Stroke,
-                        original: Some(ch),
-                    };
+                // Delayed stroke logic:
+                // If we have vowels but no mark, and this might be English (open syllable),
+                // be more cautious. But allow short patterns like "did" → "đi"
+                if has_vowel && !has_mark {
+                    // Check if this is a short d+vowel+d pattern (2-3 chars)
+                    // These are common Vietnamese: did→đi, dod→đo, dud→đu
+                    let is_short_pattern = self.buffer.len() <= 3;
 
-                    let text = self.buffer.get_text();
-                    return ProcessResult::update(text, self.buffer.len());
+                    // If not a short pattern, validate the syllable first
+                    if !is_short_pattern {
+                        let text = self.buffer.get_text();
+                        if !validation::is_valid_syllable(&text) {
+                            // Invalid syllable - don't apply stroke
+                            return ProcessResult::passthrough();
+                        }
+                    }
                 }
+
+                let new_char = transform::toggle_stroke(ch);
+                self.buffer.replace(i, new_char);
+
+                self.last_transform = LastTransform {
+                    position: Some(i),
+                    transform_type: TransformType::Stroke,
+                    original: Some(ch),
+                };
+
+                let text = self.buffer.get_text();
+                return ProcessResult::update(text, self.buffer.len());
             }
         }
 
@@ -601,6 +644,35 @@ impl Engine {
         }
 
         ProcessResult::passthrough()
+    }
+
+    /// Apply Quick Telex: expand double consonant to consonant pair
+    /// e.g., "cc" → "ch", "gg" → "gh", "nn" → "nh", etc.
+    fn apply_quick_telex(&mut self, replacement: &str, _raw_key: char) -> ProcessResult {
+        // Remove the first consonant (which was doubled)
+        if !self.buffer.is_empty() {
+            self.buffer.pop();
+        }
+
+        // Add the replacement characters (preserving case of original)
+        let was_upper = self
+            .buffer
+            .last()
+            .map(|bc| bc.ch.is_uppercase())
+            .unwrap_or(false);
+
+        for (i, ch) in replacement.chars().enumerate() {
+            let ch_to_push = if i == 0 && was_upper {
+                ch.to_uppercase().next().unwrap_or(ch)
+            } else {
+                ch
+            };
+            self.buffer.push_simple(ch_to_push);
+        }
+
+        self.last_transform = LastTransform::default();
+        let text = self.buffer.get_text();
+        ProcessResult::update(text, self.buffer.len())
     }
 
     /// Reset internal state
