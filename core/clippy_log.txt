@@ -1,0 +1,26 @@
+    Checking vietflux-core v0.1.0 (D:\Code\vietflux-ime\core)
+error: this `else { if .. }` block can be collapsed
+   --> src\engine.rs:224:20
+    |
+224 |               } else {
+    |  ____________________^
+225 | |                 if is_open {
+226 | |                     'ΓÇÿ'
+227 | |                 } else {
+...   |
+230 | |             };
+    | |_____________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#collapsible_else_if
+    = note: `-D clippy::collapsible-else-if` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::collapsible_else_if)]`
+help: collapse nested if block
+    |
+224 ~             } else if is_open {
+225 ~                 'ΓÇÿ'
+226 +             } else {
+227 ~                 'ΓÇÖ'
+228 ~             };
+    |
+
+error: could not compile `vietflux-core` (lib) due to 1 previous error

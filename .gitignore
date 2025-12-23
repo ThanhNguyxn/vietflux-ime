@@ -15,7 +15,18 @@ build
 Thumbs.db
 
 # Archives
+# Cleanup
+extracted_ui/
+new_ui_assets/
+extract_code.py
 *.zip
+*.log
+*.dll
+*.pdb
+*.exp
+*.lib
+test_log.txt
+clippy.log
 *.tar.gz
 
 # WASM build outputs  

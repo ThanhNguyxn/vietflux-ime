@@ -211,15 +211,24 @@ impl Engine {
 
         // Smart Quotes
         if self.smart_quotes && (key == '"' || key == '\'') {
-            let is_open = self.buffer.is_empty() && 
-                (self.last_committed_char.is_none() || self.last_committed_char.unwrap().is_whitespace());
-            
+            let is_open = self.buffer.is_empty()
+                && (self.last_committed_char.is_none()
+                    || self.last_committed_char.unwrap().is_whitespace());
+
             let quote = if key == '"' {
-                if is_open { '“' } else { '”' }
+                if is_open {
+                    '“'
+                } else {
+                    '”'
+                }
             } else {
-                if is_open { '‘' } else { '’' }
+                if is_open {
+                    '‘'
+                } else {
+                    '’'
+                }
             };
-            
+
             return self.handle_regular_char(quote);
         }
 
@@ -358,7 +367,7 @@ impl Engine {
 
             // Append boundary char to replacement
             let output = format!("{}{}", replacement, boundary_char);
-            
+
             // Update state
             self.last_committed_char = Some(boundary_char);
             if matches!(boundary_char, '.' | '!' | '?') {
@@ -390,7 +399,7 @@ impl Engine {
 
                 self.buffer.clear();
                 self.reset_state();
-                
+
                 // Update state
                 self.last_committed_char = Some(boundary_char);
                 if matches!(boundary_char, '.' | '!' | '?') {
@@ -772,7 +781,7 @@ mod tests {
         assert_eq!(result.output, "H");
 
         engine.process_key('i', false);
-        
+
         // 2. Sentence end
         let result = engine.process_key('.', false); // "Hi."
         assert!(engine.next_char_upper);
