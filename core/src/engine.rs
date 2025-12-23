@@ -286,7 +286,17 @@ impl Engine {
             KeyAction::QuickTelex(replacement) => {
                 self.apply_quick_telex(replacement, key_to_process)
             }
+
+            KeyAction::InsertChar(ch) => self.insert_char_directly(ch),
         }
+    }
+
+    /// Insert a character directly into the buffer (for quick shortcuts like [ → ư)
+    fn insert_char_directly(&mut self, ch: char) -> ProcessResult {
+        self.buffer.push_simple(ch);
+        self.last_transform = LastTransform::default();
+        let text = self.buffer.get_text();
+        ProcessResult::update(text, self.buffer.len())
     }
 
     /// Handle regular character input
