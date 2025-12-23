@@ -539,25 +539,64 @@ impl Engine {
         None
     }
 
-    /// Apply stroke (d → đ)
+    /// Apply stroke (d → đ) with delayed stroke logic
+    /// Based on GoNhanh's smart stroke handling:
+    /// - Allow immediate stroke for short patterns (dd → đ, did → đi)
+    /// - Validate syllable structure before applying to prevent invalid transforms
     fn apply_stroke(&mut self) -> ProcessResult {
-        // Find last 'd' and convert to 'đ'
-        for i in (0..self.buffer.len()).rev() {
+        let chars: Vec<char> = self.buffer.iter().map(|bc| bc.ch).collect();
+        
+        // Check if buffer has any vowels
+        let has_vowel = chars.iter().any(|&c| chars::is_vowel(c));
+        
+        // Check if any character has a tone mark applied (confirms Vietnamese intent)
+        let has_mark = self.buffer.iter().any(|bc| {
+            let base = chars::get_base(bc.ch);
+            base != bc.ch // If base differs, there's a diacritic
+        });
+        
+        // Find last 'd' position
+        let d_pos = (0..self.buffer.len()).rev().find(|&i| {
+            if let Some(bc) = self.buffer.get(i) {
+                bc.ch.eq_ignore_ascii_case(&'d') || bc.ch.eq_ignore_ascii_case(&'đ')
+            } else {
+                false
+            }
+        });
+        
+        if let Some(i) = d_pos {
             if let Some(bc) = self.buffer.get(i) {
                 let ch = bc.ch;
-                if ch.eq_ignore_ascii_case(&'d') || ch.eq_ignore_ascii_case(&'đ') {
-                    let new_char = transform::toggle_stroke(ch);
-                    self.buffer.replace(i, new_char);
-
-                    self.last_transform = LastTransform {
-                        position: Some(i),
-                        transform_type: TransformType::Stroke,
-                        original: Some(ch),
-                    };
-
-                    let text = self.buffer.get_text();
-                    return ProcessResult::update(text, self.buffer.len());
+                
+                // Delayed stroke logic from GoNhanh:
+                // If we have vowels but no mark, and this might be English (open syllable),
+                // be more cautious. But allow short patterns like "did" → "đi"
+                if has_vowel && !has_mark {
+                    // Check if this is a short d+vowel+d pattern (2-3 chars)
+                    // These are common Vietnamese: did→đi, dod→đo, dud→đu
+                    let is_short_pattern = self.buffer.len() <= 3;
+                    
+                    // If not a short pattern, validate the syllable first
+                    if !is_short_pattern {
+                        let text = self.buffer.get_text();
+                        if !validation::is_valid_syllable(&text) {
+                            // Invalid syllable - don't apply stroke
+                            return ProcessResult::passthrough();
+                        }
+                    }
                 }
+                
+                let new_char = transform::toggle_stroke(ch);
+                self.buffer.replace(i, new_char);
+
+                self.last_transform = LastTransform {
+                    position: Some(i),
+                    transform_type: TransformType::Stroke,
+                    original: Some(ch),
+                };
+
+                let text = self.buffer.get_text();
+                return ProcessResult::update(text, self.buffer.len());
             }
         }
 
