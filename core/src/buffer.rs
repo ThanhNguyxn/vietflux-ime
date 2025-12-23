@@ -107,7 +107,7 @@ impl Buffer {
 
     /// Replace character at index
     pub fn replace(&mut self, index: usize, ch: char) -> bool {
-        self.chars.get_mut(index).map_or(false, |bc| {
+        self.chars.get_mut(index).is_some_and(|bc| {
             bc.ch = ch;
             bc.transformed = true;
             true
