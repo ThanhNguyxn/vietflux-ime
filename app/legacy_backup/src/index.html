@@ -89,7 +89,7 @@
 
         <!-- Footer -->
         <footer>
-            <button class="footer-btn">
+            <button class="footer-btn" id="settingsBtn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="3"></circle>
@@ -107,6 +107,15 @@
                     <line x1="10" y1="14" x2="21" y2="3"></line>
                 </svg>
                 Ẩn xuống khay
+            </button>
+            <button class="footer-btn danger" id="quitBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                Kết thúc
             </button>
         </footer>
     </div>
@@ -158,6 +167,9 @@
         const triggerInput = document.getElementById('triggerInput');
         const expansionInput = document.getElementById('expansionInput');
         const appVersionEl = document.getElementById('appVersion');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const quitBtn = document.getElementById('quitBtn');
+        const addExcludedAppBtn = document.getElementById('addExcludedAppBtn');
 
         // Render Functions
         function renderUI() {

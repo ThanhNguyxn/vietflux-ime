@@ -53,7 +53,7 @@ const INVALID_VOWEL_PATTERNS: &[&str] = &[
     "eư", "oư", "iư", // ư cannot follow e, o, i directly
     "ưe", "ưo", "ưy", // Invalid ư combinations
     "ou", "yo", // English-like patterns
-    "ea", "ie", "ei", // English diphthongs
+    "ea", "ei", // English diphthongs (NOT "ie" - that's valid: tiếp, tiếng)
 ];
 
 // ============================================================

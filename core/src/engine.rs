@@ -121,6 +121,16 @@ pub struct Engine {
     possible_foreign: bool,
     /// Special character prefix for shortcuts (e.g., #vn)
     shortcut_prefix: Option<char>,
+    /// Auto-capitalize first letter of sentences
+    auto_capitalize: bool,
+    /// Smart quotes (replace ' and " with curly variants)
+    smart_quotes: bool,
+    /// Spell check enabled
+    spell_check: bool,
+    /// Flag to capitalize next character
+    next_char_upper: bool,
+    /// Last committed character (for context)
+    last_committed_char: Option<char>,
 }
 
 impl Engine {
@@ -134,6 +144,11 @@ impl Engine {
             last_transform: LastTransform::default(),
             possible_foreign: false,
             shortcut_prefix: None,
+            auto_capitalize: true,
+            smart_quotes: false,
+            spell_check: true,
+            next_char_upper: true, // Start with capital
+            last_committed_char: None,
         }
     }
 
@@ -143,6 +158,18 @@ impl Engine {
         self.method_name = name.to_lowercase();
         self.buffer.clear();
         self.reset_state();
+    }
+
+    /// Set engine options
+    pub fn set_options(&mut self, auto_capitalize: bool, smart_quotes: bool, spell_check: bool) {
+        self.auto_capitalize = auto_capitalize;
+        self.smart_quotes = smart_quotes;
+        self.spell_check = spell_check;
+    }
+
+    /// Get engine options
+    pub fn get_options(&self) -> (bool, bool, bool) {
+        (self.auto_capitalize, self.smart_quotes, self.spell_check)
     }
 
     /// Get current method name
@@ -182,14 +209,35 @@ impl Engine {
             return ProcessResult::passthrough();
         }
 
+        // Smart Quotes
+        if self.smart_quotes && (key == '"' || key == '\'') {
+            let is_open = self.buffer.is_empty() && 
+                (self.last_committed_char.is_none() || self.last_committed_char.unwrap().is_whitespace());
+            
+            let quote = if key == '"' {
+                if is_open { '“' } else { '”' }
+            } else {
+                if is_open { '‘' } else { '’' }
+            };
+            
+            return self.handle_regular_char(quote);
+        }
+
+        // Auto-capitalize
+        let mut key_to_process = key;
+        if self.auto_capitalize && self.next_char_upper && key.is_alphabetic() {
+            key_to_process = key.to_uppercase().next().unwrap();
+            self.next_char_upper = false;
+        }
+
         // Check for word boundary - triggers auto-restore check
-        if validation::is_word_boundary(key) {
+        if validation::is_word_boundary(key_to_process) {
             // Special case: Allow specific symbols as shortcut prefix if buffer is empty
-            if self.buffer.is_empty() && self.is_valid_prefix(key) {
-                self.shortcut_prefix = Some(key);
+            if self.buffer.is_empty() && self.is_valid_prefix(key_to_process) {
+                self.shortcut_prefix = Some(key_to_process);
                 return ProcessResult::passthrough();
             }
-            return self.handle_word_boundary(key);
+            return self.handle_word_boundary(key_to_process);
         }
 
         // Get previous character for context
@@ -197,29 +245,29 @@ impl Engine {
 
         // Check for foreign word pattern BEFORE processing
         let current_text = self.buffer.get_text();
-        if validation::is_foreign_word_pattern(&current_text, Some(key)) {
+        if validation::is_foreign_word_pattern(&current_text, Some(key_to_process)) {
             self.possible_foreign = true;
         }
 
         // Process through input method
-        let action = self.method.process(key, prev_char);
+        let action = self.method.process(key_to_process, prev_char);
 
         match action {
-            KeyAction::None => self.handle_regular_char(key),
+            KeyAction::None => self.handle_regular_char(key_to_process),
 
             KeyAction::Tone(tone) => {
                 // Skip if foreign word
                 if self.possible_foreign {
-                    return self.handle_regular_char(key);
+                    return self.handle_regular_char(key_to_process);
                 }
-                self.apply_tone(tone, key)
+                self.apply_tone(tone, key_to_process)
             }
 
             KeyAction::Modifier(modifier) => {
                 if self.possible_foreign {
-                    return self.handle_regular_char(key);
+                    return self.handle_regular_char(key_to_process);
                 }
-                self.apply_modifier(modifier, key)
+                self.apply_modifier(modifier, key_to_process)
             }
 
             KeyAction::Stroke => self.apply_stroke(),
@@ -310,6 +358,12 @@ impl Engine {
 
             // Append boundary char to replacement
             let output = format!("{}{}", replacement, boundary_char);
+            
+            // Update state
+            self.last_committed_char = Some(boundary_char);
+            if matches!(boundary_char, '.' | '!' | '?') {
+                self.next_char_upper = true;
+            }
 
             return ProcessResult::update(output, backspace);
         }
@@ -336,6 +390,12 @@ impl Engine {
 
                 self.buffer.clear();
                 self.reset_state();
+                
+                // Update state
+                self.last_committed_char = Some(boundary_char);
+                if matches!(boundary_char, '.' | '!' | '?') {
+                    self.next_char_upper = true;
+                }
 
                 return ProcessResult::restore(output, backspace_count);
             }
@@ -345,6 +405,12 @@ impl Engine {
         let text = format!("{}{}", transformed, boundary_char);
         self.buffer.clear();
         self.reset_state();
+
+        // Update state
+        self.last_committed_char = Some(boundary_char);
+        if matches!(boundary_char, '.' | '!' | '?') {
+            self.next_char_upper = true;
+        }
 
         ProcessResult::commit(text)
     }
@@ -694,5 +760,44 @@ mod tests {
         assert_eq!(result.output, "Việt Nam ");
         // Backspace should be 3 (#vn)
         assert_eq!(result.backspace, 3);
+    }
+
+    #[test]
+    fn test_auto_capitalize() {
+        let mut engine = Engine::new();
+        engine.set_options(true, false, true);
+
+        // 1. Start of text -> Capitalize
+        let result = engine.process_key('h', false);
+        assert_eq!(result.output, "H");
+
+        engine.process_key('i', false);
+        
+        // 2. Sentence end
+        let result = engine.process_key('.', false); // "Hi."
+        assert!(engine.next_char_upper);
+
+        let result = engine.process_key(' ', false); // "Hi. "
+        assert!(engine.next_char_upper);
+
+        let result = engine.process_key('t', false); // "Hi. T"
+        assert_eq!(result.output, "T");
+        assert!(!engine.next_char_upper);
+    }
+
+    #[test]
+    fn test_smart_quotes() {
+        let mut engine = Engine::new();
+        engine.set_options(false, true, true);
+
+        // 1. Open quote
+        let result = engine.process_key('"', false);
+        assert_eq!(result.output, "“");
+
+        engine.process_key('a', false);
+
+        // 2. Close quote
+        let result = engine.process_key('"', false);
+        assert_eq!(result.output, "”");
     }
 }
