@@ -221,12 +221,10 @@ impl Engine {
                 } else {
                     '”'
                 }
+            } else if is_open {
+                '‘'
             } else {
-                if is_open {
-                    '‘'
-                } else {
-                    '’'
-                }
+                '’'
             };
 
             return self.handle_regular_char(quote);

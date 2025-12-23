@@ -27,6 +27,10 @@ extract_code.py
 *.lib
 test_log.txt
 clippy.log
+clippy_log.txt
+core/target/
+core/deps/
+core/incremental/
 *.tar.gz
 
 # WASM build outputs  
