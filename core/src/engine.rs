@@ -282,6 +282,8 @@ impl Engine {
             KeyAction::RemoveDiacritics => self.remove_all_diacritics(),
 
             KeyAction::Undo => self.undo_last_transform(),
+
+            KeyAction::QuickTelex(replacement) => self.apply_quick_telex(replacement, key_to_process),
         }
     }
 
@@ -601,6 +603,31 @@ impl Engine {
         }
 
         ProcessResult::passthrough()
+    }
+
+    /// Apply Quick Telex: expand double consonant to consonant pair
+    /// e.g., "cc" → "ch", "gg" → "gh", "nn" → "nh", etc.
+    fn apply_quick_telex(&mut self, replacement: &str, _raw_key: char) -> ProcessResult {
+        // Remove the first consonant (which was doubled)
+        if self.buffer.len() > 0 {
+            self.buffer.pop();
+        }
+
+        // Add the replacement characters (preserving case of original)
+        let was_upper = self.buffer.last().map(|bc| bc.ch.is_uppercase()).unwrap_or(false);
+        
+        for (i, ch) in replacement.chars().enumerate() {
+            let ch_to_push = if i == 0 && was_upper {
+                ch.to_uppercase().next().unwrap_or(ch)
+            } else {
+                ch
+            };
+            self.buffer.push_simple(ch_to_push);
+        }
+
+        self.last_transform = LastTransform::default();
+        let text = self.buffer.get_text();
+        ProcessResult::update(text, self.buffer.len())
     }
 
     /// Reset internal state
