@@ -288,6 +288,41 @@ pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool
         return true;
     }
 
+    // PATTERN 9: YO combination (yoga, yolo, yo-yo)
+    // Vietnamese doesn't have "yo" diphthong
+    if lower.contains("yo") {
+        return true;
+    }
+
+    // PATTERN 10: OU combination outside of specific Vietnamese patterns
+    // "your", "our", "out", "about" → English
+    // Exception: "tou" in some loan words, "sou" patterns
+    if lower.contains("ou") {
+        // Check if it's in a clearly English context
+        let has_english_context = lower.starts_with("you")
+            || lower.starts_with("our")
+            || lower.starts_with("out")
+            || lower.ends_with("ous")
+            || lower.ends_with("ould")
+            || lower.ends_with("ound")
+            || lower.ends_with("ount");
+        if has_english_context {
+            return true;
+        }
+    }
+
+    // PATTERN 11: J initial (just, join, job)
+    // Vietnamese doesn't use J (uses GI instead)
+    if lower.starts_with('j') {
+        return true;
+    }
+
+    // PATTERN 12: Z at start or middle (zero, amazing)
+    // Vietnamese doesn't use Z
+    if lower.contains('z') {
+        return true;
+    }
+
     false
 }
 

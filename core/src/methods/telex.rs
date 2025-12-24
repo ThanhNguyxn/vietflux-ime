@@ -79,6 +79,11 @@ impl InputMethod for Telex {
                 KeyAction::None
             }
 
+            // Quick key shortcuts (OpenKey style)
+            // [ → ư, ] → ơ for faster typing without needing uw/ow
+            '[' => KeyAction::InsertChar('ư'),
+            ']' => KeyAction::InsertChar('ơ'),
+
             _ => KeyAction::None,
         }
     }
@@ -159,5 +164,14 @@ mod tests {
         assert_eq!(telex.process('q', Some('q')), KeyAction::QuickTelex("qu"));
         // kk → kh
         assert_eq!(telex.process('k', Some('k')), KeyAction::QuickTelex("kh"));
+    }
+
+    #[test]
+    fn test_telex_bracket_shortcuts() {
+        let telex = Telex;
+        // [ → ư (quick shortcut from OpenKey)
+        assert_eq!(telex.process('[', None), KeyAction::InsertChar('ư'));
+        // ] → ơ (quick shortcut from OpenKey)
+        assert_eq!(telex.process(']', None), KeyAction::InsertChar('ơ'));
     }
 }

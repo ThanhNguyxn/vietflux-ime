@@ -27,6 +27,8 @@ pub enum KeyAction {
     Undo,
     /// Quick Telex: expand double consonant (cc→ch, gg→gh, nn→nh, etc.)
     QuickTelex(&'static str),
+    /// Insert a specific character directly (for quick shortcuts like [ → ư, ] → ơ)
+    InsertChar(char),
 }
 
 /// Input method trait
