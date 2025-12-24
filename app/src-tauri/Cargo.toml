@@ -1,6 +1,6 @@
 [package]
 name = "vietflux-app"
-version = "1.0.0"
+version = "1.0.1"
 description = "VietFlux IME - Vietnamese Input Method"
 authors = ["ThanhNguyxn"]
 edition = "2021"
