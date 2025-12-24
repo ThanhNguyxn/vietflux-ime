@@ -1,43 +1,77 @@
+# Dependabot configuration for vietflux-ime
 version: 2
 updates:
-  # GitHub Actions
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "daily"
-    open-pull-requests-limit: 10
-
-  # Core Rust Crate
-  - package-ecosystem: "cargo"
-    directory: "/core"
-    schedule:
-      interval: "daily"
-    open-pull-requests-limit: 10
-
-  # Tauri App (Rust)
-  - package-ecosystem: "cargo"
-    directory: "/app/src-tauri"
-    schedule:
-      interval: "daily"
-    open-pull-requests-limit: 10
-
-  # Frontend (NPM)
+  # Frontend App (Electron/React)
   - package-ecosystem: "npm"
     directory: "/app"
     schedule:
       interval: "daily"
     open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(app)"
+    labels:
+      - "dependencies"
+      - "frontend"
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
-  # Analysis (NPM)
+  # Analysis Service (Node.js)
   - package-ecosystem: "npm"
     directory: "/analysis"
     schedule:
       interval: "daily"
     open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(analysis)"
+    labels:
+      - "dependencies"
+      - "analysis"
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
-  # Analysis (Rust)
+  # Core Logic (Rust)
   - package-ecosystem: "cargo"
     directory: "/analysis/core"
     schedule:
       interval: "daily"
     open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(core)"
+    labels:
+      - "dependencies"
+      - "rust"
+    groups:
+      rust-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(ci)"
+    labels:
+      - "dependencies"
+      - "ci"
+    groups:
+      actions:
+        patterns:
+          - "*"
