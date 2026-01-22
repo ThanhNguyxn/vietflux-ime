@@ -127,6 +127,9 @@ pub struct Engine {
     smart_quotes: bool,
     /// Spell check enabled
     spell_check: bool,
+    /// Modern tone positioning style (hoà vs hòa)
+    /// true = modern (hoà, khoẻ, thuỷ), false = traditional (hòa, khỏe, thủy)
+    modern_style: bool,
     /// Flag to capitalize next character
     next_char_upper: bool,
     /// Last committed character (for context)
@@ -147,6 +150,7 @@ impl Engine {
             auto_capitalize: true,
             smart_quotes: false,
             spell_check: true,
+            modern_style: true, // Default to modern style
             next_char_upper: true, // Start with capital
             last_committed_char: None,
         }
@@ -165,6 +169,17 @@ impl Engine {
         self.auto_capitalize = auto_capitalize;
         self.smart_quotes = smart_quotes;
         self.spell_check = spell_check;
+    }
+
+    /// Set tone positioning style
+    /// true = modern (hoà, khoẻ, thuỷ), false = traditional (hòa, khỏe, thủy)
+    pub fn set_modern_style(&mut self, modern: bool) {
+        self.modern_style = modern;
+    }
+
+    /// Get current style
+    pub fn is_modern_style(&self) -> bool {
+        self.modern_style
     }
 
     /// Get engine options
@@ -267,6 +282,22 @@ impl Engine {
                 if self.possible_foreign {
                     return self.handle_regular_char(key_to_process);
                 }
+
+                // VNI fix: If number comes after consonant without vowel, treat as regular char
+                // e.g., "var1" should be "var1" not "vár"
+                if key_to_process.is_ascii_digit() {
+                    let has_vowel = self.buffer.iter().any(|bc| chars::is_vowel(bc.ch));
+                    if !has_vowel {
+                        return self.handle_regular_char(key_to_process);
+                    }
+                    // Also check if last char is consonant (like "int1" -> should stay "int1")
+                    if let Some(last) = self.buffer.last() {
+                        if chars::is_consonant(last.ch) {
+                            return self.handle_regular_char(key_to_process);
+                        }
+                    }
+                }
+
                 self.apply_tone(tone, key_to_process)
             }
 
@@ -274,6 +305,15 @@ impl Engine {
                 if self.possible_foreign {
                     return self.handle_regular_char(key_to_process);
                 }
+
+                // VNI fix: Same logic for modifiers (6, 7, 8)
+                if key_to_process.is_ascii_digit() {
+                    let has_vowel = self.buffer.iter().any(|bc| chars::is_vowel(bc.ch));
+                    if !has_vowel {
+                        return self.handle_regular_char(key_to_process);
+                    }
+                }
+
                 self.apply_modifier(modifier, key_to_process)
             }
 
@@ -460,8 +500,10 @@ impl Engine {
             }
         }
 
-        // Find best position for tone
-        if let Some(pos) = transform::find_tone_position(&chars, &vowel_indices) {
+        // Find best position for tone (using style setting)
+        if let Some(pos) =
+            transform::find_tone_position_styled(&chars, &vowel_indices, self.modern_style)
+        {
             let old_char = chars[pos];
             if let Some(new_char) = transform::apply_tone(old_char, tone) {
                 self.buffer.replace(pos, new_char);
@@ -659,18 +701,22 @@ impl Engine {
     /// Apply Quick Telex: expand double consonant to consonant pair
     /// e.g., "cc" → "ch", "gg" → "gh", "nn" → "nh", etc.
     fn apply_quick_telex(&mut self, replacement: &str, _raw_key: char) -> ProcessResult {
-        // Remove the first consonant (which was doubled)
-        if !self.buffer.is_empty() {
-            self.buffer.pop();
+        // Check if buffer has at least one character to pop
+        if self.buffer.is_empty() {
+            return ProcessResult::passthrough();
         }
 
-        // Add the replacement characters (preserving case of original)
+        // Remember case of the character we're about to pop
         let was_upper = self
             .buffer
             .last()
             .map(|bc| bc.ch.is_uppercase())
             .unwrap_or(false);
 
+        // Remove the first consonant (which was doubled)
+        self.buffer.pop();
+
+        // Add the replacement characters (preserving case of original)
         for (i, ch) in replacement.chars().enumerate() {
             let ch_to_push = if i == 0 && was_upper {
                 ch.to_uppercase().next().unwrap_or(ch)
@@ -696,6 +742,17 @@ impl Engine {
         self.buffer.clear();
         self.shortcut_prefix = None;
         self.reset_state();
+    }
+
+    /// Handle backspace - remove last character from buffer
+    /// Returns the number of characters that were in the buffer before backspace
+    pub fn backspace(&mut self) -> usize {
+        let len = self.buffer.len();
+        if len > 0 {
+            self.buffer.pop();
+            self.last_transform = LastTransform::default();
+        }
+        len
     }
 
     /// Get current buffer text
@@ -888,12 +945,539 @@ mod tests {
 
         // 1. Open quote
         let result = engine.process_key('"', false);
-        assert_eq!(result.output, "“");
+        assert_eq!(result.output, "\u{201C}"); // Left double quote
 
         engine.process_key('a', false);
 
         // 2. Close quote
         let result = engine.process_key('"', false);
-        assert!(result.output.ends_with("”"));
+        assert!(result.output.ends_with('\u{201D}')); // Right double quote
+    }
+
+    #[test]
+    fn test_vni_number_after_consonant() {
+        // VNI numbers should not apply tone to consonant-only buffers
+        // "var1" should stay "var1" not become "vár"
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("vni");
+
+        // Type "var1"
+        engine.process_key('v', false);
+        engine.process_key('a', false);
+        engine.process_key('r', false);
+        engine.process_key('1', false);
+
+        // Should be "vár" because there's a vowel 'a' and last char is consonant
+        // Actually the rule says: if last char is consonant after vowel, don't apply tone
+        // Let me check: buffer = "var", last = 'r' which is consonant
+        // So it should be "var1" not "vár"
+        assert_eq!(engine.get_buffer(), "var1");
+    }
+
+    #[test]
+    fn test_vni_number_no_vowel() {
+        // VNI: "str1" should stay "str1" (no vowel to apply tone to)
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("vni");
+
+        engine.process_key('s', false);
+        engine.process_key('t', false);
+        engine.process_key('r', false);
+        engine.process_key('1', false);
+
+        assert_eq!(engine.get_buffer(), "str1");
+    }
+
+    #[test]
+    fn test_vni_number_after_vowel() {
+        // VNI: "ba1" should become "bá" (vowel 'a' present, last char is vowel)
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("vni");
+
+        engine.process_key('b', false);
+        engine.process_key('a', false);
+        engine.process_key('1', false);
+
+        assert_eq!(engine.get_buffer(), "bá");
+    }
+
+    #[test]
+    fn test_uo_compound() {
+        // Test UO compound: "duoc" + horn → "dươc"
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        engine.process_key('d', false);
+        engine.process_key('u', false);
+        engine.process_key('o', false);
+        engine.process_key('c', false);
+
+        // Now apply horn with 'w'
+        // Actually we need to go back - the 'w' should apply to u or o
+        // Let me create a simpler test
+        engine.clear();
+
+        engine.process_key('d', false);
+        engine.process_key('u', false);
+        engine.process_key('o', false);
+        engine.process_key('w', false); // Apply horn to "uo" → "ươ"
+
+        assert_eq!(engine.get_buffer(), "dươ");
+    }
+
+    #[test]
+    fn test_tone_position_hoa() {
+        // Test tone position for "hoa" (modern: hoà, traditional: hòa)
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        // Modern style (default)
+        engine.set_modern_style(true);
+        engine.process_key('h', false);
+        engine.process_key('o', false);
+        engine.process_key('a', false);
+        engine.process_key('f', false); // grave tone
+
+        assert_eq!(engine.get_buffer(), "hoà"); // Modern: tone on 'a'
+
+        // Traditional style
+        engine.clear();
+        engine.set_modern_style(false);
+        engine.process_key('h', false);
+        engine.process_key('o', false);
+        engine.process_key('a', false);
+        engine.process_key('f', false); // grave tone
+
+        assert_eq!(engine.get_buffer(), "hòa"); // Traditional: tone on 'o'
+    }
+
+    #[test]
+    fn test_backspace() {
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        engine.process_key('v', false);
+        engine.process_key('i', false);
+        engine.process_key('e', false);
+
+        assert_eq!(engine.get_buffer(), "vie");
+        assert_eq!(engine.backspace(), 3); // Returns previous length
+        assert_eq!(engine.get_buffer(), "vi");
+        assert_eq!(engine.backspace(), 2);
+        assert_eq!(engine.get_buffer(), "v");
+    }
+
+    // NOTE: The bracket shortcuts ([ → ư, ] → ơ) are defined in telex.rs
+    // but they don't work in engine because brackets are treated as word
+    // boundaries before reaching the input method. This is a known limitation.
+    // To use ư/ơ quickly, users should use uw/ow instead.
+
+    #[test]
+    fn test_uppercase_handling() {
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        // Uppercase with shift
+        engine.process_key('V', false);
+        engine.process_key('I', false);
+        engine.process_key('E', false);
+        engine.process_key('T', false);
+
+        assert_eq!(engine.get_buffer(), "VIET");
+
+        // Add tone to uppercase
+        engine.clear();
+        engine.process_key('A', false);
+        engine.process_key('s', false); // tone modifier
+
+        assert_eq!(engine.get_buffer(), "Á");
+    }
+
+    #[test]
+    fn test_stroke_dd() {
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        engine.process_key('d', false);
+        engine.process_key('d', false);
+
+        assert_eq!(engine.get_buffer(), "đ");
+    }
+
+    #[test]
+    fn test_stroke_uppercase() {
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        engine.process_key('D', false);
+        engine.process_key('D', false);
+
+        assert_eq!(engine.get_buffer(), "Đ");
+    }
+
+    #[test]
+    fn test_quick_telex_nn() {
+        // nn → nh
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        engine.process_key('n', false);
+        engine.process_key('n', false);
+
+        assert_eq!(engine.get_buffer(), "nh");
+    }
+
+    #[test]
+    fn test_remove_diacritics_z() {
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        // Type "á" then press 'z' to remove tone
+        engine.process_key('a', false);
+        engine.process_key('s', false); // á
+        assert_eq!(engine.get_buffer(), "á");
+
+        engine.process_key('z', false); // remove diacritics
+        assert_eq!(engine.get_buffer(), "a");
+    }
+
+    #[test]
+    fn test_horn_uw_ow() {
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        // uw → ư
+        engine.process_key('u', false);
+        engine.process_key('w', false);
+        assert_eq!(engine.get_buffer(), "ư");
+
+        // ow → ơ
+        engine.clear();
+        engine.process_key('o', false);
+        engine.process_key('w', false);
+        assert_eq!(engine.get_buffer(), "ơ");
+    }
+
+    #[test]
+    fn test_breve_aw() {
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        // aw → ă
+        engine.process_key('a', false);
+        engine.process_key('w', false);
+        assert_eq!(engine.get_buffer(), "ă");
+    }
+
+    #[test]
+    fn test_complex_vietnamese_word() {
+        // Test "việt" - a complex word with modifier + tone
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        engine.process_key('v', false);
+        engine.process_key('i', false);
+        engine.process_key('e', false);
+        engine.process_key('e', false); // ê
+        engine.process_key('j', false); // ệ (dot tone)
+        engine.process_key('t', false);
+
+        assert_eq!(engine.get_buffer(), "việt");
+    }
+
+    #[test]
+    fn test_multiple_vowels_in_word() {
+        // Test "người" - uơi vowel cluster
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        engine.process_key('n', false);
+        engine.process_key('g', false);
+        engine.process_key('u', false);
+        engine.process_key('o', false);
+        engine.process_key('w', false); // ươ
+        engine.process_key('i', false);
+
+        assert_eq!(engine.get_buffer(), "ngươi");
+
+        // Add grave tone
+        engine.process_key('f', false);
+        assert_eq!(engine.get_buffer(), "người");
+    }
+
+    #[test]
+    fn test_foreign_word_passthrough() {
+        // "hello" should be detected as foreign and not transformed
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        engine.process_key('h', false);
+        engine.process_key('e', false);
+        engine.process_key('l', false);
+        engine.process_key('l', false); // "ll" is foreign
+        engine.process_key('o', false);
+
+        // Should remain as "hello" - the 'll' makes it foreign
+        assert_eq!(engine.get_buffer(), "hello");
+    }
+
+    #[test]
+    fn test_vni_circumflex() {
+        // VNI: a6 → â, e6 → ê, o6 → ô
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("vni");
+
+        engine.process_key('a', false);
+        engine.process_key('6', false);
+        assert_eq!(engine.get_buffer(), "â");
+
+        engine.clear();
+        engine.process_key('e', false);
+        engine.process_key('6', false);
+        assert_eq!(engine.get_buffer(), "ê");
+
+        engine.clear();
+        engine.process_key('o', false);
+        engine.process_key('6', false);
+        assert_eq!(engine.get_buffer(), "ô");
+    }
+
+    #[test]
+    fn test_vni_horn() {
+        // VNI: o7 → ơ, u7 → ư
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("vni");
+
+        engine.process_key('o', false);
+        engine.process_key('7', false);
+        assert_eq!(engine.get_buffer(), "ơ");
+
+        engine.clear();
+        engine.process_key('u', false);
+        engine.process_key('7', false);
+        assert_eq!(engine.get_buffer(), "ư");
+    }
+
+    #[test]
+    fn test_vni_breve() {
+        // VNI: a8 → ă
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("vni");
+
+        engine.process_key('a', false);
+        engine.process_key('8', false);
+        assert_eq!(engine.get_buffer(), "ă");
+    }
+
+    #[test]
+    fn test_vni_stroke() {
+        // VNI: d9 → đ
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("vni");
+
+        engine.process_key('d', false);
+        engine.process_key('9', false);
+        assert_eq!(engine.get_buffer(), "đ");
+    }
+
+    #[test]
+    fn test_vni_all_tones() {
+        // VNI: 1=sắc, 2=huyền, 3=hỏi, 4=ngã, 5=nặng
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("vni");
+
+        // a1 → á
+        engine.process_key('a', false);
+        engine.process_key('1', false);
+        assert_eq!(engine.get_buffer(), "á");
+
+        // a2 → à
+        engine.clear();
+        engine.process_key('a', false);
+        engine.process_key('2', false);
+        assert_eq!(engine.get_buffer(), "à");
+
+        // a3 → ả
+        engine.clear();
+        engine.process_key('a', false);
+        engine.process_key('3', false);
+        assert_eq!(engine.get_buffer(), "ả");
+
+        // a4 → ã
+        engine.clear();
+        engine.process_key('a', false);
+        engine.process_key('4', false);
+        assert_eq!(engine.get_buffer(), "ã");
+
+        // a5 → ạ
+        engine.clear();
+        engine.process_key('a', false);
+        engine.process_key('5', false);
+        assert_eq!(engine.get_buffer(), "ạ");
+    }
+
+    #[test]
+    fn test_combined_modifier_and_tone() {
+        // Test combining circumflex + tone: â + sắc = ấ
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        engine.process_key('a', false);
+        engine.process_key('a', false); // â
+        engine.process_key('s', false); // ấ
+        assert_eq!(engine.get_buffer(), "ấ");
+
+        // horn + tone: ơ + huyền = ờ
+        engine.clear();
+        engine.process_key('o', false);
+        engine.process_key('w', false); // ơ
+        engine.process_key('f', false); // ờ
+        assert_eq!(engine.get_buffer(), "ờ");
+
+        // breve + tone: ă + ngã = ẵ
+        engine.clear();
+        engine.process_key('a', false);
+        engine.process_key('w', false); // ă
+        engine.process_key('x', false); // ẵ
+        assert_eq!(engine.get_buffer(), "ẵ");
+    }
+
+    #[test]
+    fn test_tone_before_modifier() {
+        // Test applying tone before modifier
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        // Type "a" + tone 's' → "á", then 'a' for circumflex → "ấ"
+        engine.process_key('a', false);
+        engine.process_key('s', false); // á
+        engine.process_key('a', false); // ấ
+        assert_eq!(engine.get_buffer(), "ấ");
+    }
+
+    #[test]
+    fn test_horn_after_tone() {
+        // Test applying horn after tone: ó + w → ớ
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        engine.process_key('o', false);
+        engine.process_key('s', false); // ó
+        engine.process_key('w', false); // ớ
+        assert_eq!(engine.get_buffer(), "ớ");
+    }
+
+    #[test]
+    fn test_breve_after_tone() {
+        // Test applying breve after tone: á + w → ắ
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        engine.process_key('a', false);
+        engine.process_key('s', false); // á
+        engine.process_key('w', false); // ắ
+        assert_eq!(engine.get_buffer(), "ắ");
+    }
+
+    #[test]
+    fn test_programming_keyword_passthrough() {
+        // "null" should be detected as programming keyword and not transformed
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        engine.process_key('n', false);
+        engine.process_key('u', false);
+        engine.process_key('l', false);
+        engine.process_key('l', false); // "ll" is foreign
+
+        // Should remain as "null"
+        assert_eq!(engine.get_buffer(), "null");
+    }
+
+    #[test]
+    fn test_quick_telex_all() {
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        // cc → ch
+        engine.process_key('c', false);
+        engine.process_key('c', false);
+        assert_eq!(engine.get_buffer(), "ch");
+
+        // gg → gh
+        engine.clear();
+        engine.process_key('g', false);
+        engine.process_key('g', false);
+        assert_eq!(engine.get_buffer(), "gh");
+
+        // kk → kh
+        engine.clear();
+        engine.process_key('k', false);
+        engine.process_key('k', false);
+        assert_eq!(engine.get_buffer(), "kh");
+
+        // pp → ph
+        engine.clear();
+        engine.process_key('p', false);
+        engine.process_key('p', false);
+        assert_eq!(engine.get_buffer(), "ph");
+
+        // tt → th
+        engine.clear();
+        engine.process_key('t', false);
+        engine.process_key('t', false);
+        assert_eq!(engine.get_buffer(), "th");
+
+        // qq → qu
+        engine.clear();
+        engine.process_key('q', false);
+        engine.process_key('q', false);
+        assert_eq!(engine.get_buffer(), "qu");
+    }
+
+    #[test]
+    fn test_stroke_toggle() {
+        // Test đ + d = toggle back to 'd'
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        // dd → đ
+        engine.process_key('d', false);
+        engine.process_key('d', false);
+        assert_eq!(engine.get_buffer(), "đ");
+
+        // đd → d (toggle stroke off, just 'd' remains)
+        // Note: This is consistent with how tones work (ás → as)
+        // The second 'd' toggles the stroke off
+        engine.process_key('d', false);
+        assert_eq!(engine.get_buffer(), "d");
     }
 }

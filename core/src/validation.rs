@@ -31,18 +31,118 @@ pub const VALID_VOWEL_PATTERNS: &[&str] = &[
     "ôi", "ơi", "ua", "uâ", "uê", "ui", "uo", "uô", "uơ", "ươ", "ưa", "ưi", "ưu", "ya", "yê", "uy",
     // Triphthongs (nguyên âm ba)
     "iêu", "oai", "oay", "oeo", "uây", "uôi", "ươi", "ươu", "yêu",
-    // With qu- prefix patterns
-    "uya", "uyê", "uyu", // Special triphthongs
+    // With qu- prefix patterns (triphthongs after qu)
+    "uya", "uyê", "uyu",
+    // Additional patterns
     "uêu", // nguều ngoào
     "oao", // ngoào
+    // Missing patterns found in Vietnamese words
+    "uyên", // nguyên, quyên, huyên
+    "uyêt", // quyết, tuyết
+    "uynh", // khuỳnh (but this is vowel+final, uynh = uy + nh)
+    "oong", // xoong, noong (valid Vietnamese "oo" pattern)
+    "iên",  // tiên, điện (iê + n)
+    "iêp",  // tiếp (iê + p)
+    "iêc",  // tiệc (iê + c)
+    "iêt",  // việt, tiết (iê + t)
+    "iêm",  // điểm, tiếm (iê + m)
+    "iêng", // tiếng, điếng (iê + ng)
 ];
 
+/// Common English programming keywords and words that should NOT be converted
+/// These are exact matches (case-insensitive)
+const PROGRAMMING_KEYWORDS: &[&str] = &[
+    // Common 2-letter words that look like Vietnamese patterns
+    "as", "is", "if", "in", "or", "do", "vs", "os", "go", "to", "of", "on", "be", "by",
+    "at", "an", "so", "no", "up", "us", "ok", "id", "io", "ip", "ui", "ux", "db", "js",
+    "ts", "py", "go", "rs", "cs", "fs", "rx", "tx", "fn", "eq", "ne", "lt", "gt", "le",
+    "ge", "ai", "ml", "mr", "ms", "mt", "mb", "mx", "my", "px", "pt", "em", "ex", "vm",
+    // Common 3-letter words
+    "the", "and", "for", "are", "but", "not", "you", "all", "can", "her", "was", "one",
+    "our", "out", "day", "had", "has", "his", "how", "its", "let", "may", "new", "now",
+    "old", "see", "way", "who", "boy", "did", "get", "say", "she", "too", "use", "var",
+    "int", "str", "arr", "obj", "len", "max", "min", "sum", "avg", "std", "def", "pub",
+    "mut", "ref", "ptr", "src", "dst", "tmp", "err", "nil", "nan", "inf", "log", "exp",
+    "sin", "cos", "tan", "abs", "pow", "mod", "div", "mul", "sub", "add", "cmp", "opt",
+    "arg", "env", "sys", "api", "url", "uri", "dom", "css", "sql", "xml", "txt", "doc",
+    "img", "svg", "png", "jpg", "gif", "pdf", "zip", "tar", "exe", "dll", "lib", "bin",
+    "app", "web", "net", "tcp", "udp", "ssh", "ftp", "cdn", "dns", "vpn", "mac", "cpu",
+    "gpu", "ram", "rom", "ssd", "hdd", "usb", "hdmi", "rgb", "led", "lcd", "ios", "apk",
+    "set", "map", "vec", "box", "key", "val", "idx", "pos", "neg", "bit", "hex", "oct",
+    "run", "end", "top", "low", "mid", "raw", "own", "any", "try", "yes", "yet", "ago",
+    // Programming keywords
+    "null", "void", "true", "false", "this", "self", "super", "class", "enum", "type",
+    "impl", "trait", "async", "await", "yield", "break", "const", "final", "static",
+    "public", "private", "protected", "return", "import", "export", "from", "with",
+    "case", "else", "elif", "then", "loop", "while", "until", "match", "when", "where",
+    "func", "proc", "main", "init", "exit", "test", "spec", "mock", "stub", "fake",
+    "push", "pull", "pop", "peek", "poll", "send", "recv", "read", "write", "open",
+    "close", "lock", "unlock", "sync", "drop", "move", "copy", "clone", "swap",
+    // Common 4+ letter words that could be mistyped as Vietnamese
+    "code", "file", "data", "name", "type", "size", "list", "item", "node", "tree",
+    "root", "path", "link", "text", "font", "icon", "menu", "form", "page", "view",
+    "show", "hide", "load", "save", "edit", "find", "sort", "count", "check", "valid",
+    "error", "debug", "trace", "print", "parse", "build", "start", "stop", "reset",
+    "clear", "empty", "array", "slice", "tuple", "queue", "stack", "value", "index",
+    "input", "output", "stream", "buffer", "cache", "store", "state", "event", "action",
+    "click", "press", "focus", "hover", "scroll", "select", "change", "update", "delete",
+    "insert", "append", "remove", "filter", "reduce", "format", "encode", "decode",
+    // Common tech words
+    "admin", "user", "guest", "owner", "group", "role", "auth", "token", "session",
+    "cookie", "header", "body", "query", "param", "route", "model", "schema", "table",
+    "column", "field", "record", "entity", "object", "struct", "interface", "module",
+    "package", "library", "framework", "runtime", "compiler", "linker", "loader",
+];
+
+/// Check if buffer exactly matches a common English word
+fn is_common_english_word(buffer: &str) -> bool {
+    let lower = buffer.to_lowercase();
+    PROGRAMMING_KEYWORDS.contains(&lower.as_str())
+}
+
+/// Check if buffer looks like a programming identifier (camelCase, snake_case, etc.)
+fn is_programming_identifier(buffer: &str) -> bool {
+    let chars: Vec<char> = buffer.chars().collect();
+
+    // Check for camelCase pattern (lowercase followed by uppercase)
+    // e.g., "getValue", "firstName"
+    for i in 1..chars.len() {
+        if chars[i].is_uppercase() && chars[i - 1].is_lowercase() {
+            return true;
+        }
+    }
+
+    // Check for underscore (snake_case)
+    if buffer.contains('_') {
+        return true;
+    }
+
+    // Check for number in middle of word (variable names like "item1", "var2")
+    for (i, c) in chars.iter().enumerate() {
+        if c.is_ascii_digit() && i > 0 && i < chars.len() - 1 {
+            return true;
+        }
+    }
+
+    false
+}
+
 /// Foreign word consonant clusters (not valid in Vietnamese)
+/// Note: "tr" is a valid Vietnamese initial so it's NOT included here
 #[allow(dead_code)]
 const FOREIGN_CLUSTERS: &[&str] = &[
-    "tr", "pr", "cr", "br", "dr", "gr", "fr", // After finals
-    "st", "sp", "sc", "sk", "sm", "sn", "sl", "sw", "bl", "cl", "fl", "gl", "pl", "ck", "dg",
-    "ght", "wh", "wr",
+    // Common English clusters that don't exist in Vietnamese
+    "pr", "cr", "br", "dr", "gr", "fr", // *r clusters (except tr which is Vietnamese)
+    "st", "sp", "sc", "sk", "sm", "sn", "sl", "sw", // s* clusters
+    "bl", "cl", "fl", "gl", "pl", // *l clusters
+    "ck", "dg", "ght", "wh", "wr", // Other English patterns
+    "tw", "dw", "gn", "kn", "ps", "pn", // More English clusters
+    "str", "spr", "scr", "spl", "squ", // Triple consonant clusters
+    "chr", "thr", "shr", "phr", // More English clusters
+    "mp", "nd", "nt", "nk", "nc", "nch", // Consonant clusters at end (rare in Vietnamese)
+    "ct", "ft", "pt", "xt", "lt", // More end clusters
+    "lk", "lm", "lp", "lb", "ld", "lf", // L + consonant
+    "rb", "rc", "rd", "rf", "rg", "rk", "rl", "rm", "rn", "rp", "rs", "rt", "rv", // R + consonant
 ];
 
 /// Invalid vowel patterns (impossible in Vietnamese)
@@ -154,6 +254,17 @@ pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool
         return false;
     }
 
+    // PATTERN 0a: Check for common English/programming words FIRST
+    // This prevents false positives for words like "as", "is", "if", "var", etc.
+    if is_common_english_word(&lower) {
+        return true;
+    }
+
+    // PATTERN 0b: Check for programming identifiers (camelCase, snake_case)
+    if is_programming_identifier(buffer) {
+        return true;
+    }
+
     // Skip check for valid typing sequences like "dodo" (typing đô)
     if is_valid_typing_sequence(&lower) {
         return false;
@@ -184,10 +295,11 @@ pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool
 
     // PATTERN 2: W AT START + CONSONANT
     // "water", "window", "world" → English
-    // Exception: "ưng", "ưn" (w + sonorant final) → Vietnamese
+    // Vietnamese "w" is only used as modifier (ư), not as initial
     if lower.starts_with('w') && chars.len() > 1 {
         let second = chars[1];
-        if crate::chars::is_consonant(second) && second != 'h' {
+        // W + any consonant is English (including "wh" for what, where, when)
+        if crate::chars::is_consonant(second) {
             return true;
         }
     }
@@ -226,15 +338,23 @@ pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool
         }
     }
 
-    // PATTERN 8: DOUBLE VOWEL + CONSONANT (English "looks", "took")
-    // Different from Telex "aa" → "â" which creates circumflex
+    // PATTERN 8: Double vowel + consonant (English "look", "took")
+    // BUT: "oo" is valid in Vietnamese words like "xoong" (pot), "noong" (goggles)
+    // So only detect as foreign if NOT a valid Vietnamese pattern
     if lower.contains("oo") && chars.len() > 2 {
-        // If followed by consonant (not another vowel), likely English
         if let Some(pos) = lower.find("oo") {
+            // Check if it's followed by a consonant
             if pos + 2 < chars.len() {
                 let after = chars[pos + 2];
                 if crate::chars::is_consonant(after) {
-                    return true;
+                    // Check if it's a valid Vietnamese "oo" pattern
+                    // Valid: xoong, noong, toong, hoong (oo + ng)
+                    // Invalid: look, took, book (oo + k without being part of valid syllable)
+                    let remaining: String = chars[pos..].iter().collect();
+                    // "oong" is valid Vietnamese, other "oo" + consonant patterns are likely English
+                    if !remaining.starts_with("oong") {
+                        return true;
+                    }
                 }
             }
         }
@@ -254,10 +374,6 @@ pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool
     // Check for foreign consonant clusters (not at start)
     for cluster in FOREIGN_CLUSTERS {
         if lower.contains(cluster) {
-            // Allow "tr" at the start (Vietnamese "tr")
-            if *cluster == "tr" && lower.starts_with("tr") {
-                continue;
-            }
             // Check if cluster is found
             if let Some(pos) = lower.find(cluster) {
                 if pos == 0 {
@@ -288,27 +404,21 @@ pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool
         return true;
     }
 
-    // PATTERN 9: YO combination (yoga, yolo, yo-yo)
-    // Vietnamese doesn't have "yo" diphthong
-    if lower.contains("yo") {
+    // PATTERN 9: YO combination (yoga, yolo)
+    // BUT: Be careful - "yo" at the END of Vietnamese words could be valid typing sequence
+    // Only detect as foreign if "yo" is at the start or in clear English context
+    if lower.starts_with("yo") && chars.len() > 2 {
+        // "yo" at start followed by more chars is likely English
         return true;
     }
 
     // PATTERN 10: OU combination outside of specific Vietnamese patterns
     // "your", "our", "out", "about" → English
-    // Exception: "tou" in some loan words, "sou" patterns
+    // Vietnamese doesn't have "ou" diphthong
     if lower.contains("ou") {
-        // Check if it's in a clearly English context
-        let has_english_context = lower.starts_with("you")
-            || lower.starts_with("our")
-            || lower.starts_with("out")
-            || lower.ends_with("ous")
-            || lower.ends_with("ould")
-            || lower.ends_with("ound")
-            || lower.ends_with("ount");
-        if has_english_context {
-            return true;
-        }
+        // All "ou" combinations are English (Vietnamese doesn't have this)
+        // Exception: Some rare loan words, but better to be safe
+        return true;
     }
 
     // PATTERN 11: J initial (just, join, job)
@@ -321,6 +431,68 @@ pub fn is_foreign_word_pattern(buffer: &str, modifier_key: Option<char>) -> bool
     // Vietnamese doesn't use Z
     if lower.contains('z') {
         return true;
+    }
+
+    // PATTERN 13: English word endings
+    // Words ending in "th" (with, both, math) except Vietnamese "th" initial
+    if lower.len() > 2 && lower.ends_with("th") {
+        // Vietnamese "th" is only at the start, never at the end
+        return true;
+    }
+
+    // PATTERN 14: Words ending in "ght" (light, right, thought)
+    if lower.ends_with("ght") {
+        return true;
+    }
+
+    // PATTERN 15: Words ending in "sh" (fish, push, wash)
+    // Vietnamese doesn't have "sh" (uses "s" or "x")
+    if lower.ends_with("sh") {
+        return true;
+    }
+
+    // PATTERN 16: Words ending in "tch" (watch, catch, match)
+    if lower.ends_with("tch") {
+        return true;
+    }
+
+    // PATTERN 17: Double consonants that aren't Vietnamese
+    // Words with "ll", "ss", "ff", "rr", "tt", "pp", "bb", "dd", "gg", "mm", "nn"
+    // Exception: "nn" at end could be Vietnamese (chann, mann in some dialects)
+    for double in &["ll", "ss", "ff", "rr", "bb", "pp", "cc", "gg"] {
+        if lower.contains(*double) {
+            return true;
+        }
+    }
+
+    // PATTERN 18: "-ing" ending (common English gerund)
+    if lower.ends_with("ing") && lower.len() > 4 {
+        return true;
+    }
+
+    // PATTERN 19: "-ed" ending (common English past tense)
+    if lower.ends_with("ed") && lower.len() > 3 {
+        // Check if preceded by consonant (more likely English)
+        let chars: Vec<char> = lower.chars().collect();
+        if chars.len() >= 3 {
+            let before_ed = chars[chars.len() - 3];
+            if crate::chars::is_consonant(before_ed) {
+                return true;
+            }
+        }
+    }
+
+    // PATTERN 20: "-ly" ending (common English adverb)
+    if lower.ends_with("ly") && lower.len() > 3 {
+        return true;
+    }
+
+    // PATTERN 21: X at start (except in rare Vietnamese names)
+    // But X inside word after vowel is Vietnamese (như "bảy", "tây")
+    // Actually "x" initial IS valid Vietnamese (xin, xem, xanh)
+    // Only check for X patterns that are clearly English
+    if lower.starts_with("ex") && lower.len() > 3 {
+        return true; // "example", "exit", "export"
     }
 
     false
@@ -389,10 +561,7 @@ fn is_foreign_pattern(s: &str) -> bool {
     // Consonant clusters that don't exist in Vietnamese
     for cluster in FOREIGN_CLUSTERS {
         if s.contains(cluster) {
-            // But allow "tr" at the start (Vietnamese "tr")
-            if *cluster == "tr" && s.starts_with("tr") {
-                continue;
-            }
+            // "wh" is already in FOREIGN_CLUSTERS, no special handling needed
             return true;
         }
     }
@@ -496,8 +665,9 @@ fn is_valid_vowel_pattern(vowel_base: &str) -> bool {
 fn is_breve_followed_by_vowel(vowel: &str) -> bool {
     let chars: Vec<char> = vowel.chars().collect();
     for i in 0..chars.len().saturating_sub(1) {
-        // Check if current char is ă (breve)
-        if chars[i] == 'ă' || chars::get_base(chars[i]) == 'a' && has_breve(chars[i]) {
+        // Check if current char is ă (breve) or any variant with breve
+        let is_breve_char = has_breve(chars[i]);
+        if is_breve_char {
             // And next char is a vowel
             if crate::chars::is_vowel(chars[i + 1]) {
                 return true;
@@ -768,5 +938,77 @@ mod tests {
         assert!(is_foreign_word_pattern("look", None));
         assert!(is_foreign_word_pattern("took", None));
         assert!(is_foreign_word_pattern("book", None));
+        // But "xoong" is valid Vietnamese
+        assert!(!is_foreign_word_pattern("xoong", None));
+    }
+
+    #[test]
+    fn test_programming_keywords() {
+        // Common programming keywords should be detected as English
+        assert!(is_foreign_word_pattern("as", None));
+        assert!(is_foreign_word_pattern("is", None));
+        assert!(is_foreign_word_pattern("if", None));
+        assert!(is_foreign_word_pattern("in", None));
+        assert!(is_foreign_word_pattern("or", None));
+        assert!(is_foreign_word_pattern("var", None));
+        assert!(is_foreign_word_pattern("int", None));
+        assert!(is_foreign_word_pattern("str", None));
+        assert!(is_foreign_word_pattern("null", None));
+        assert!(is_foreign_word_pattern("true", None));
+        assert!(is_foreign_word_pattern("false", None));
+    }
+
+    #[test]
+    fn test_programming_identifiers() {
+        // camelCase, snake_case should be detected as programming
+        assert!(is_foreign_word_pattern("getValue", None));
+        assert!(is_foreign_word_pattern("firstName", None));
+        assert!(is_foreign_word_pattern("user_name", None));
+        assert!(is_foreign_word_pattern("my_var", None));
+    }
+
+    #[test]
+    fn test_valid_vietnamese_not_detected() {
+        // Valid Vietnamese patterns should NOT be detected as foreign
+        assert!(!is_foreign_word_pattern("việt", None)); // Has diacritics
+        assert!(!is_foreign_word_pattern("xin", None));
+        assert!(!is_foreign_word_pattern("chao", None));
+        // Valid oo pattern
+        assert!(!is_foreign_word_pattern("xoong", None));
+    }
+
+    #[test]
+    fn test_ou_pattern() {
+        // "ou" is not valid in Vietnamese
+        assert!(is_foreign_word_pattern("sound", None));
+        assert!(is_foreign_word_pattern("round", None));
+        assert!(is_foreign_word_pattern("about", None));
+        assert!(is_foreign_word_pattern("your", None));
+        assert!(is_foreign_word_pattern("four", None));
+        assert!(is_foreign_word_pattern("pour", None));
+    }
+
+    #[test]
+    fn test_english_endings() {
+        // English word endings
+        assert!(is_foreign_word_pattern("with", None));   // -th ending
+        assert!(is_foreign_word_pattern("both", None));
+        assert!(is_foreign_word_pattern("light", None));  // -ght ending
+        assert!(is_foreign_word_pattern("right", None));
+        assert!(is_foreign_word_pattern("fish", None));   // -sh ending
+        assert!(is_foreign_word_pattern("push", None));
+        assert!(is_foreign_word_pattern("watch", None));  // -tch ending
+        assert!(is_foreign_word_pattern("running", None)); // -ing ending
+        assert!(is_foreign_word_pattern("played", None)); // -ed ending
+        assert!(is_foreign_word_pattern("quickly", None)); // -ly ending
+    }
+
+    #[test]
+    fn test_double_consonants() {
+        // Double consonants that don't exist in Vietnamese
+        assert!(is_foreign_word_pattern("all", None));    // ll
+        assert!(is_foreign_word_pattern("pass", None));   // ss
+        assert!(is_foreign_word_pattern("off", None));    // ff
+        assert!(is_foreign_word_pattern("error", None));  // rr
     }
 }

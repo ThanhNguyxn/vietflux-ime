@@ -7,7 +7,7 @@
 //! - Remove: z
 
 use super::{InputMethod, KeyAction};
-use crate::chars::{ToneMark, VowelMod};
+use crate::chars::{self, ToneMark, VowelMod};
 
 /// Telex input method
 pub struct Telex;
@@ -31,7 +31,10 @@ impl InputMethod for Telex {
             // Vowel modifiers (double key = circumflex)
             'a' | 'e' | 'o' => {
                 if let Some(prev) = prev_char {
-                    if prev.to_ascii_lowercase() == key_lower {
+                    // Use get_base to handle Vietnamese chars with diacritics
+                    // e.g., 'á' → 'a', so typing 'a' after 'á' will add circumflex → 'ấ'
+                    let prev_base = chars::get_base(prev.to_ascii_lowercase());
+                    if prev_base == key_lower {
                         return KeyAction::Modifier(VowelMod::Circumflex);
                     }
                 }
@@ -39,16 +42,22 @@ impl InputMethod for Telex {
             }
 
             // w = horn (ơ, ư) or breve (ă)
-            'w' => prev_char.map_or(KeyAction::None, |prev| match prev.to_ascii_lowercase() {
-                'a' => KeyAction::Modifier(VowelMod::Breve), // aw = ă
-                'o' | 'u' => KeyAction::Modifier(VowelMod::Horn), // ow=ơ, uw=ư
-                _ => KeyAction::None,
+            'w' => prev_char.map_or(KeyAction::None, |prev| {
+                // Use get_base to handle Vietnamese chars with diacritics
+                let prev_base = chars::get_base(prev.to_ascii_lowercase());
+                match prev_base {
+                    'a' => KeyAction::Modifier(VowelMod::Breve), // aw = ă
+                    'o' | 'u' => KeyAction::Modifier(VowelMod::Horn), // ow=ơ, uw=ư
+                    _ => KeyAction::None,
+                }
             }),
 
-            // dd = đ
+            // dd = đ (or đd = toggle back to d)
             'd' => {
                 if let Some(prev) = prev_char {
-                    if prev.eq_ignore_ascii_case(&'d') {
+                    // Handle both 'd' and 'đ' for double stroke toggle
+                    let prev_lower = prev.to_ascii_lowercase();
+                    if prev_lower == 'd' || prev_lower == 'đ' {
                         return KeyAction::Stroke;
                     }
                 }

@@ -34,7 +34,9 @@ impl InputMethod for Vni {
             // Stroke (đ)
             '9' => {
                 if let Some(prev) = prev_char {
-                    if prev.eq_ignore_ascii_case(&'d') {
+                    // Use get_base to handle 'đ' -> toggle back to 'd'
+                    let prev_lower = prev.to_ascii_lowercase();
+                    if prev_lower == 'd' || prev_lower == 'đ' {
                         return KeyAction::Stroke;
                     }
                 }
