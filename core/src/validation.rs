@@ -12,7 +12,7 @@ use crate::chars::{self, VowelMod, REVERSE_MAP};
 /// Valid initial consonants (phụ âm đầu) - 16 single + 10 pairs + ngh
 pub const VALID_INITIALS: &[&str] = &[
     // Single consonants
-    "", "b", "c", "d", "đ", "g", "h", "k", "l", "m", "n", "p", "q", "r", "s", "t", "v", "x",
+    "", "b", "c", "d", "đ", "g", "h", "k", "l", "m", "n", "p", "r", "s", "t", "v", "x",
     // Consonant pairs
     "ch", "gh", "gi", "kh", "ng", "nh", "ph", "th", "tr", "qu", // Special triple
     "ngh",
@@ -1339,6 +1339,24 @@ mod tests {
         assert!(is_foreign_word_pattern("running", None)); // -ing ending
         assert!(is_foreign_word_pattern("played", None)); // -ed ending
         assert!(is_foreign_word_pattern("quickly", None)); // -ly ending
+    }
+
+    #[test]
+    fn test_standalone_q_not_valid_initial() {
+        // "q" is NOT a valid standalone initial — only "qu" is
+        // "qa", "qe", "qi" etc. should NOT validate as Vietnamese
+        assert!(!is_valid_syllable("qa"));
+        assert!(!is_valid_syllable("qe"));
+        assert!(!is_valid_syllable("qi"));
+        assert!(!is_valid_syllable("qo"));
+
+        // "qu" + vowel should still work
+        assert!(is_valid_syllable("qua"));
+        assert!(is_valid_syllable("que"));
+        assert!(is_valid_syllable("qui"));
+        assert!(is_valid_syllable("quo"));
+        assert!(is_valid_syllable("quan"));
+        assert!(is_valid_syllable("quyen"));
     }
 
     #[test]

@@ -490,16 +490,16 @@ impl Engine {
         let chars: Vec<char> = self.buffer.iter().map(|bc| bc.ch).collect();
         let vowel_indices = transform::find_vowel_indices(&chars);
 
-        // Check for double-mark undo
-        if let Some(&last_idx) = vowel_indices.last() {
-            if transform::should_undo_tone(chars[last_idx], tone) {
-                // Undo: remove tone and output raw key
-                let (without_tone, _) = transform::remove_tone(chars[last_idx]);
-                self.buffer.replace(last_idx, without_tone);
+        // Check for double-mark undo: scan ALL vowels to find the one with matching tone,
+        // not just the last vowel (tone may be on a middle vowel in tri-vowel words like "khoẻ")
+        for &idx in vowel_indices.iter().rev() {
+            if transform::should_undo_tone(chars[idx], tone) {
+                let (without_tone, _) = transform::remove_tone(chars[idx]);
+                self.buffer.replace(idx, without_tone);
                 self.buffer.push_simple(raw_key);
 
                 self.last_transform = LastTransform {
-                    position: Some(last_idx),
+                    position: Some(idx),
                     transform_type: TransformType::None,
                     original: None,
                 };
@@ -1666,6 +1666,32 @@ mod tests {
             engine.process_key(ch, false);
         }
         assert_eq!(engine.get_buffer(), "hòa");
+    }
+
+    #[test]
+    fn test_tone_undo_on_non_last_vowel() {
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        // "khoẻ" -> pressing 'r' again should undo the hỏi tone on 'e' (not 'o')
+        for ch in "khoer".chars() {
+            engine.process_key(ch, false);
+        }
+        assert_eq!(engine.get_buffer(), "khoẻ");
+
+        engine.process_key('r', false);
+        assert_eq!(engine.get_buffer(), "khoer");
+
+        // "hoài" -> tone is on 'a', pressing 'f' again should undo
+        engine.clear();
+        for ch in "hoaif".chars() {
+            engine.process_key(ch, false);
+        }
+        assert_eq!(engine.get_buffer(), "hoài");
+
+        engine.process_key('f', false);
+        assert_eq!(engine.get_buffer(), "hoaif");
     }
 
     #[test]
