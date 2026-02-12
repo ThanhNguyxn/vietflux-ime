@@ -14,6 +14,18 @@ pub const CONSONANTS: &[char] = &[
     'b', 'c', 'd', 'đ', 'g', 'h', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'x',
 ];
 
+/// Unicode-aware lowercase — handles Vietnamese characters like Á→á, Ư→ư, Đ→đ
+/// Unlike `to_ascii_lowercase()`, this works on ALL Unicode characters.
+pub fn to_lower(c: char) -> char {
+    c.to_lowercase().next().unwrap_or(c)
+}
+
+/// Unicode-aware uppercase — handles Vietnamese characters like á→Á, ư→Ư, đ→Đ
+/// Unlike `to_ascii_uppercase()`, this works on ALL Unicode characters.
+pub fn to_upper(c: char) -> char {
+    c.to_uppercase().next().unwrap_or(c)
+}
+
 /// Tone marks (dấu)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ToneMark {
@@ -145,31 +157,29 @@ pub static REVERSE_MAP: LazyLock<HashMap<char, (char, VowelMod, ToneMark)>> =
 
 /// Check if a character is a vowel (including modified forms)
 pub fn is_vowel(c: char) -> bool {
-    let lower = c.to_ascii_lowercase();
-    VOWELS.contains(&lower) || REVERSE_MAP.contains_key(&c)
+    let lower = to_lower(c);
+    VOWELS.contains(&lower) || REVERSE_MAP.contains_key(&lower)
 }
 
 /// Check if a character is a consonant
 pub fn is_consonant(c: char) -> bool {
-    CONSONANTS.contains(&c.to_ascii_lowercase())
+    CONSONANTS.contains(&to_lower(c))
 }
 
 /// Get the base form of a Vietnamese character
 pub fn get_base(c: char) -> char {
-    REVERSE_MAP
-        .get(&c.to_ascii_lowercase())
-        .map_or(c, |&(base, _, _)| {
-            if c.is_uppercase() {
-                base.to_ascii_uppercase()
-            } else {
-                base
-            }
-        })
+    REVERSE_MAP.get(&to_lower(c)).map_or(c, |&(base, _, _)| {
+        if c.is_uppercase() {
+            base.to_ascii_uppercase()
+        } else {
+            base
+        }
+    })
 }
 
 /// Get character with new tone mark
 pub fn with_tone(c: char, tone: ToneMark) -> Option<char> {
-    let lower = c.to_ascii_lowercase();
+    let lower = to_lower(c);
     let (base, modifier, _) =
         REVERSE_MAP
             .get(&lower)
@@ -187,7 +197,7 @@ pub fn with_tone(c: char, tone: ToneMark) -> Option<char> {
 
 /// Get character with new vowel modifier
 pub fn with_modifier(c: char, modifier: VowelMod) -> Option<char> {
-    let lower = c.to_ascii_lowercase();
+    let lower = to_lower(c);
     let (base, _, tone) =
         REVERSE_MAP
             .get(&lower)
@@ -196,7 +206,7 @@ pub fn with_modifier(c: char, modifier: VowelMod) -> Option<char> {
 
     CHAR_MAP.get(&(base, modifier, tone)).map(|&result| {
         if c.is_uppercase() {
-            result.to_ascii_uppercase()
+            result.to_uppercase().next().unwrap_or(result)
         } else {
             result
         }
@@ -227,5 +237,53 @@ mod tests {
         assert_eq!(with_modifier('a', VowelMod::Circumflex), Some('â'));
         assert_eq!(with_modifier('á', VowelMod::Circumflex), Some('ấ'));
         assert_eq!(with_modifier('o', VowelMod::Horn), Some('ơ'));
+    }
+
+    #[test]
+    fn test_is_vowel_uppercase_vietnamese() {
+        assert!(is_vowel('Á'));
+        assert!(is_vowel('Ắ'));
+        assert!(is_vowel('Ê'));
+        assert!(is_vowel('Ơ'));
+        assert!(is_vowel('Ư'));
+        assert!(is_vowel('Ề'));
+        assert!(is_vowel('Ộ'));
+        assert!(is_vowel('Ự'));
+    }
+
+    #[test]
+    fn test_get_base_uppercase_vietnamese() {
+        assert_eq!(get_base('Á'), 'A');
+        assert_eq!(get_base('Ắ'), 'A');
+        assert_eq!(get_base('Ư'), 'U');
+        assert_eq!(get_base('Ơ'), 'O');
+        assert_eq!(get_base('Ề'), 'E');
+    }
+
+    #[test]
+    fn test_with_tone_uppercase_vietnamese() {
+        assert_eq!(with_tone('Á', ToneMark::Grave), Some('À'));
+        assert_eq!(with_tone('Ế', ToneMark::Dot), Some('Ệ'));
+        assert_eq!(with_tone('Ư', ToneMark::Acute), Some('Ứ'));
+    }
+
+    #[test]
+    fn test_with_modifier_uppercase_vietnamese() {
+        assert_eq!(with_modifier('A', VowelMod::Circumflex), Some('Â'));
+        assert_eq!(with_modifier('Á', VowelMod::Circumflex), Some('Ấ'));
+        assert_eq!(with_modifier('O', VowelMod::Horn), Some('Ơ'));
+        assert_eq!(with_modifier('U', VowelMod::Horn), Some('Ư'));
+    }
+
+    #[test]
+    fn test_to_lower_upper_vietnamese() {
+        assert_eq!(to_lower('Á'), 'á');
+        assert_eq!(to_lower('Ư'), 'ư');
+        assert_eq!(to_lower('Đ'), 'đ');
+        assert_eq!(to_lower('Ế'), 'ế');
+        assert_eq!(to_upper('á'), 'Á');
+        assert_eq!(to_upper('ư'), 'Ư');
+        assert_eq!(to_upper('đ'), 'Đ');
+        assert_eq!(to_upper('ế'), 'Ế');
     }
 }

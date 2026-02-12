@@ -7,7 +7,7 @@
 //! - Remove: 0
 
 use super::{InputMethod, KeyAction};
-use crate::chars::{ToneMark, VowelMod};
+use crate::chars::{self, ToneMark, VowelMod};
 
 /// VNI input method
 pub struct Vni;
@@ -34,7 +34,9 @@ impl InputMethod for Vni {
             // Stroke (đ)
             '9' => {
                 if let Some(prev) = prev_char {
-                    if prev.eq_ignore_ascii_case(&'d') {
+                    // Use get_base to handle 'đ' -> toggle back to 'd'
+                    let prev_lower = chars::to_lower(prev);
+                    if prev_lower == 'd' || prev_lower == 'đ' {
                         return KeyAction::Stroke;
                     }
                 }
@@ -83,5 +85,14 @@ mod tests {
         let vni = Vni;
         assert_eq!(vni.process('9', Some('d')), KeyAction::Stroke);
         assert_eq!(vni.process('9', Some('a')), KeyAction::None);
+    }
+
+    #[test]
+    fn test_vni_stroke_uppercase() {
+        let vni = Vni;
+        // '9' after 'D' should trigger stroke
+        assert_eq!(vni.process('9', Some('D')), KeyAction::Stroke);
+        // '9' after 'Đ' should trigger stroke toggle
+        assert_eq!(vni.process('9', Some('Đ')), KeyAction::Stroke);
     }
 }

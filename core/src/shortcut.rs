@@ -139,13 +139,15 @@ impl ShortcutTable {
                     match s.condition {
                         TriggerCondition::Immediate => {
                             return Some(ShortcutMatch {
-                                backspace_count: trigger.len(),
+                                // Use chars().count() to get character count, not byte length
+                                // This is important for UTF-8 triggers with Vietnamese chars
+                                backspace_count: trigger.chars().count(),
                                 replacement: s.replacement.clone(),
                             });
                         }
                         TriggerCondition::OnWordBoundary if is_word_boundary => {
                             return Some(ShortcutMatch {
-                                backspace_count: trigger.len(),
+                                backspace_count: trigger.chars().count(),
                                 replacement: s.replacement.clone(),
                             });
                         }

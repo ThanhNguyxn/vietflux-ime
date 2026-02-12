@@ -64,7 +64,7 @@ pub fn apply_modifier(ch: char, modifier: VowelMod) -> Option<char> {
 /// Remove all diacritics from a character
 #[allow(clippy::option_if_let_else)]
 pub fn remove_diacritics(ch: char) -> char {
-    let lower = ch.to_ascii_lowercase();
+    let lower = chars::to_lower(ch);
 
     if let Some(&(base, _, _)) = REVERSE_MAP.get(&lower) {
         if ch.is_uppercase() {
@@ -95,7 +95,7 @@ pub fn toggle_stroke(ch: char) -> char {
 
 /// Get the current tone of a character
 pub fn get_tone(ch: char) -> ToneMark {
-    let lower = ch.to_ascii_lowercase();
+    let lower = chars::to_lower(ch);
     REVERSE_MAP
         .get(&lower)
         .map_or(ToneMark::None, |&(_, _, tone)| tone)
@@ -103,7 +103,7 @@ pub fn get_tone(ch: char) -> ToneMark {
 
 /// Get the current modifier of a character
 pub fn get_modifier(ch: char) -> VowelMod {
-    let lower = ch.to_ascii_lowercase();
+    let lower = chars::to_lower(ch);
     REVERSE_MAP
         .get(&lower)
         .map_or(VowelMod::None, |&(_, modifier, _)| modifier)
@@ -161,13 +161,13 @@ pub fn find_tone_position_styled(
     if vowel_indices.len() > 1 {
         if crate::validation::has_gi_initial(&word) {
             // Skip 'i' if it's the first vowel
-            let first_vowel = chars[vowel_indices[0]].to_ascii_lowercase();
+            let first_vowel = chars::to_lower(chars[vowel_indices[0]]);
             if chars::get_base(first_vowel) == 'i' {
                 effective_vowels = &vowel_indices[1..];
             }
         } else if crate::validation::has_qu_initial(&word) {
             // Skip 'u' if it's the first vowel
-            let first_vowel = chars[vowel_indices[0]].to_ascii_lowercase();
+            let first_vowel = chars::to_lower(chars[vowel_indices[0]]);
             if chars::get_base(first_vowel) == 'u' {
                 effective_vowels = &vowel_indices[1..];
             }
@@ -193,8 +193,8 @@ pub fn find_tone_position_styled(
             let first_idx = vowel_indices[i];
             let second_idx = vowel_indices[i + 1];
 
-            let first = chars[first_idx].to_ascii_lowercase();
-            let second = chars[second_idx].to_ascii_lowercase();
+            let first = chars::to_lower(chars[first_idx]);
+            let second = chars::to_lower(chars[second_idx]);
 
             let first_base = chars::get_base(first);
             let second_base = chars::get_base(second);
@@ -226,8 +226,8 @@ pub fn find_tone_position_styled(
 
         // Rule 4: Two vowels
         2 => {
-            let first = chars[vowel_indices[0]].to_ascii_lowercase();
-            let second = chars[vowel_indices[1]].to_ascii_lowercase();
+            let first = chars::to_lower(chars[vowel_indices[0]]);
+            let second = chars::to_lower(chars[vowel_indices[1]]);
 
             let first_base = chars::get_base(first);
             let second_base = chars::get_base(second);
@@ -250,22 +250,20 @@ pub fn find_tone_position_styled(
                 }
             }
 
-            // Other pairs where tone goes on first vowel (not affected by style)
+            // Pairs where tone goes on the FIRST vowel.
+            // Only base (unmodified) vowels listed here — modified vowels
+            // (ê, ô, ơ, ư, â, ă) are already handled by Rule 1 above.
             let first_tone_pairs = [
                 ('i', 'a'),
-                ('i', 'ê'), // ia, iê
+                ('i', 'u'), // iu: líu, xíu, rìu, chịu
                 ('u', 'a'),
-                ('u', 'ô'),
-                ('u', 'ơ'), // ua, uô, uơ
-                ('ư', 'a'),
-                ('ư', 'ơ'), // ưa, ươ
                 ('a', 'i'),
                 ('a', 'o'),
                 ('a', 'u'),
-                ('a', 'y'), // ai, ao, au, ay
-                ('e', 'o'), // eo
-                ('o', 'i'), // oi
-                ('u', 'i'), // ui
+                ('a', 'y'),
+                ('e', 'o'), // eo: mèo, teo
+                ('o', 'i'),
+                ('u', 'i'),
             ];
 
             // Check if this is a "first vowel" pair
@@ -306,8 +304,8 @@ pub fn apply_uo_compound(chars: &mut [char], start_idx: usize) -> TransformResul
         return TransformResult::none();
     }
 
-    let first = chars[start_idx].to_ascii_lowercase();
-    let second = chars[start_idx + 1].to_ascii_lowercase();
+    let first = chars::to_lower(chars[start_idx]);
+    let second = chars::to_lower(chars[start_idx + 1]);
 
     let first_base = chars::get_base(first);
     let second_base = chars::get_base(second);
@@ -323,12 +321,12 @@ pub fn apply_uo_compound(chars: &mut [char], start_idx: usize) -> TransformResul
             if let Some(new_second) = apply_modifier_with_tone('o', VowelMod::Horn, second_tone) {
                 // Preserve case
                 chars[start_idx] = if chars[start_idx].is_uppercase() {
-                    new_first.to_ascii_uppercase()
+                    chars::to_upper(new_first)
                 } else {
                     new_first
                 };
                 chars[start_idx + 1] = if chars[start_idx + 1].is_uppercase() {
-                    new_second.to_ascii_uppercase()
+                    chars::to_upper(new_second)
                 } else {
                     new_second
                 };
@@ -375,7 +373,7 @@ pub fn remove_tone(ch: char) -> (char, bool) {
         if modifier != VowelMod::None {
             if let Some(with_mod) = apply_modifier(without_tone, modifier) {
                 let result = if ch.is_uppercase() {
-                    with_mod.to_ascii_uppercase()
+                    chars::to_upper(with_mod)
                 } else {
                     with_mod
                 };
@@ -384,7 +382,7 @@ pub fn remove_tone(ch: char) -> (char, bool) {
         }
 
         let result = if ch.is_uppercase() {
-            without_tone.to_ascii_uppercase()
+            chars::to_upper(without_tone)
         } else {
             without_tone
         };
@@ -404,9 +402,11 @@ pub fn remove_modifier(ch: char) -> (char, bool) {
     let base = chars::get_base(ch);
     let tone = get_tone(ch);
 
-    if let Some(without_mod) = CHAR_MAP.get(&(base, VowelMod::None, tone)).copied() {
+    // CHAR_MAP uses lowercase bases — get_base preserves case so we must lowercase
+    let base_lower = chars::to_lower(base);
+    if let Some(without_mod) = CHAR_MAP.get(&(base_lower, VowelMod::None, tone)).copied() {
         let result = if ch.is_uppercase() {
-            without_mod.to_ascii_uppercase()
+            chars::to_upper(without_mod)
         } else {
             without_mod
         };
@@ -434,7 +434,7 @@ pub fn find_modifier_position(chars: &[char], modifier: VowelMod) -> Option<usiz
 
     // Find last matching vowel (right to left)
     for i in (0..chars.len()).rev() {
-        let c = chars[i].to_ascii_lowercase();
+        let c = chars::to_lower(chars[i]);
         let base = chars::get_base(c);
         if valid_bases.contains(&base) {
             return Some(i);
@@ -555,5 +555,64 @@ mod tests {
         let chars: Vec<char> = "quan".chars().collect();
         let vowels = find_vowel_indices(&chars);
         assert_eq!(find_tone_position(&chars, &vowels), Some(2));
+    }
+
+    #[test]
+    fn test_get_tone_uppercase() {
+        assert_eq!(get_tone('Á'), ToneMark::Acute);
+        assert_eq!(get_tone('Ề'), ToneMark::Grave);
+        assert_eq!(get_tone('Ổ'), ToneMark::Hook);
+        assert_eq!(get_tone('Ữ'), ToneMark::Tilde);
+        assert_eq!(get_tone('Ự'), ToneMark::Dot);
+    }
+
+    #[test]
+    fn test_get_modifier_uppercase() {
+        assert_eq!(get_modifier('Ư'), VowelMod::Horn);
+        assert_eq!(get_modifier('Ô'), VowelMod::Circumflex);
+        assert_eq!(get_modifier('Ơ'), VowelMod::Horn);
+        assert_eq!(get_modifier('Ă'), VowelMod::Breve);
+    }
+
+    #[test]
+    fn test_remove_diacritics_uppercase() {
+        assert_eq!(remove_diacritics('Á'), 'A');
+        assert_eq!(remove_diacritics('Ầ'), 'A');
+        assert_eq!(remove_diacritics('Ư'), 'U');
+        assert_eq!(remove_diacritics('Ế'), 'E');
+    }
+
+    #[test]
+    fn test_remove_tone_uppercase() {
+        let (result, changed) = remove_tone('Á');
+        assert!(changed);
+        assert_eq!(result, 'A');
+
+        let (result, changed) = remove_tone('Ấ');
+        assert!(changed);
+        assert_eq!(result, 'Â');
+    }
+
+    #[test]
+    fn test_remove_modifier_uppercase() {
+        let (result, changed) = remove_modifier('Â');
+        assert!(changed);
+        assert_eq!(result, 'A');
+
+        let (result, changed) = remove_modifier('Ơ');
+        assert!(changed);
+        assert_eq!(result, 'O');
+    }
+
+    #[test]
+    fn test_find_modifier_position_uppercase() {
+        let chars: Vec<char> = "TUO".chars().collect();
+        assert_eq!(find_modifier_position(&chars, VowelMod::Horn), Some(2));
+
+        let chars: Vec<char> = "HOA".chars().collect();
+        assert_eq!(
+            find_modifier_position(&chars, VowelMod::Circumflex),
+            Some(2)
+        );
     }
 }
