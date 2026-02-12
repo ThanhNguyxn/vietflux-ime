@@ -1356,7 +1356,7 @@ mod tests {
         assert!(is_valid_syllable("qui"));
         assert!(is_valid_syllable("quo"));
         assert!(is_valid_syllable("quan"));
-        assert!(is_valid_syllable("quyen"));
+        assert!(is_valid_syllable("quyên"));
     }
 
     #[test]
