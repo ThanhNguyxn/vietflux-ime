@@ -972,7 +972,7 @@ fn normalize_vowel(vowel: &str) -> String {
             // Get the character with modifier but without tone
             // Get the character with modifier but without tone
             chars::REVERSE_MAP
-                .get(&c.to_ascii_lowercase())
+                .get(&chars::to_lower(c))
                 .map_or(c, |&(base, modifier, _tone)| {
                     // Look up character with same base+modifier but no tone
                     chars::CHAR_MAP

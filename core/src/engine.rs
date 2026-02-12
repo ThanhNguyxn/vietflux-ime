@@ -592,8 +592,8 @@ impl Engine {
     /// Find UO compound position
     fn find_uo_compound(&self, chars: &[char]) -> Option<usize> {
         for i in 0..chars.len().saturating_sub(1) {
-            let first = chars::get_base(chars[i].to_ascii_lowercase());
-            let second = chars::get_base(chars[i + 1].to_ascii_lowercase());
+            let first = chars::get_base(chars::to_lower(chars[i]));
+            let second = chars::get_base(chars::to_lower(chars[i + 1]));
 
             if first == 'u' && second == 'o' {
                 return Some(i);

@@ -33,7 +33,7 @@ impl InputMethod for Telex {
                 if let Some(prev) = prev_char {
                     // Use get_base to handle Vietnamese chars with diacritics
                     // e.g., 'á' → 'a', so typing 'a' after 'á' will add circumflex → 'ấ'
-                    let prev_base = chars::get_base(prev.to_ascii_lowercase());
+                    let prev_base = chars::get_base(chars::to_lower(prev));
                     if prev_base == key_lower {
                         return KeyAction::Modifier(VowelMod::Circumflex);
                     }
@@ -44,7 +44,7 @@ impl InputMethod for Telex {
             // w = horn (ơ, ư) or breve (ă)
             'w' => prev_char.map_or(KeyAction::None, |prev| {
                 // Use get_base to handle Vietnamese chars with diacritics
-                let prev_base = chars::get_base(prev.to_ascii_lowercase());
+                let prev_base = chars::get_base(chars::to_lower(prev));
                 match prev_base {
                     'a' => KeyAction::Modifier(VowelMod::Breve), // aw = ă
                     'o' | 'u' => KeyAction::Modifier(VowelMod::Horn), // ow=ơ, uw=ư
@@ -56,7 +56,7 @@ impl InputMethod for Telex {
             'd' => {
                 if let Some(prev) = prev_char {
                     // Handle both 'd' and 'đ' for double stroke toggle
-                    let prev_lower = prev.to_ascii_lowercase();
+                    let prev_lower = chars::to_lower(prev);
                     if prev_lower == 'd' || prev_lower == 'đ' {
                         return KeyAction::Stroke;
                     }
@@ -182,5 +182,24 @@ mod tests {
         assert_eq!(telex.process('[', None), KeyAction::InsertChar('ư'));
         // ] → ơ (quick shortcut from OpenKey)
         assert_eq!(telex.process(']', None), KeyAction::InsertChar('ơ'));
+    }
+
+    #[test]
+    fn test_telex_uppercase_prev_char() {
+        let telex = Telex;
+        // Typing 'a' after 'Á' should trigger circumflex (Á has base 'a')
+        assert_eq!(
+            telex.process('a', Some('Á')),
+            KeyAction::Modifier(VowelMod::Circumflex)
+        );
+        // Typing 'w' after 'Ú' should trigger horn (Ú has base 'u')
+        assert_eq!(
+            telex.process('w', Some('Ú')),
+            KeyAction::Modifier(VowelMod::Horn)
+        );
+        // Typing 'd' after 'Đ' should trigger stroke toggle
+        assert_eq!(telex.process('d', Some('Đ')), KeyAction::Stroke);
+        // Typing 'd' after 'D' should trigger stroke
+        assert_eq!(telex.process('d', Some('D')), KeyAction::Stroke);
     }
 }
