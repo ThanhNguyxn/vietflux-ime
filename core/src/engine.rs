@@ -1567,9 +1567,16 @@ mod tests {
         }
         assert_eq!(engine.get_buffer(), "thương");
 
-        // duowcj → được
+        // duowcj → dược (not được: dd is needed for đ)
         engine.clear();
         for ch in "duowcj".chars() {
+            engine.process_key(ch, false);
+        }
+        assert_eq!(engine.get_buffer(), "dược");
+
+        // dduowcj → được (with dd for đ)
+        engine.clear();
+        for ch in "dduowcj".chars() {
             engine.process_key(ch, false);
         }
         assert_eq!(engine.get_buffer(), "được");

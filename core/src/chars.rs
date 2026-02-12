@@ -196,7 +196,7 @@ pub fn with_modifier(c: char, modifier: VowelMod) -> Option<char> {
 
     CHAR_MAP.get(&(base, modifier, tone)).map(|&result| {
         if c.is_uppercase() {
-            result.to_ascii_uppercase()
+            result.to_uppercase().next().unwrap_or(result)
         } else {
             result
         }
