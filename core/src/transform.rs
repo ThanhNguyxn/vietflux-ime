@@ -250,22 +250,20 @@ pub fn find_tone_position_styled(
                 }
             }
 
-            // Other pairs where tone goes on first vowel (not affected by style)
+            // Pairs where tone goes on the FIRST vowel.
+            // Only base (unmodified) vowels listed here — modified vowels
+            // (ê, ô, ơ, ư, â, ă) are already handled by Rule 1 above.
             let first_tone_pairs = [
                 ('i', 'a'),
-                ('i', 'ê'), // ia, iê
+                ('i', 'u'), // iu: líu, xíu, rìu, chịu
                 ('u', 'a'),
-                ('u', 'ô'),
-                ('u', 'ơ'), // ua, uô, uơ
-                ('ư', 'a'),
-                ('ư', 'ơ'), // ưa, ươ
                 ('a', 'i'),
                 ('a', 'o'),
                 ('a', 'u'),
-                ('a', 'y'), // ai, ao, au, ay
-                ('e', 'o'), // eo
-                ('o', 'i'), // oi
-                ('u', 'i'), // ui
+                ('a', 'y'),
+                ('e', 'o'), // eo: mèo, teo
+                ('o', 'i'),
+                ('u', 'i'),
             ];
 
             // Check if this is a "first vowel" pair

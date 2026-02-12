@@ -259,7 +259,7 @@ impl Engine {
             let prev_for_shortcut = self.buffer.last().map(|bc| bc.ch);
             let shortcut_action = self.method.process(key_to_process, prev_for_shortcut);
             if let KeyAction::InsertChar(ch) = shortcut_action {
-                return self.insert_char_directly(ch);
+                return self.insert_char_directly(ch, key_to_process);
             }
 
             // Special case: Allow specific symbols as shortcut prefix if buffer is empty
@@ -335,13 +335,14 @@ impl Engine {
                 self.apply_quick_telex(replacement, key_to_process)
             }
 
-            KeyAction::InsertChar(ch) => self.insert_char_directly(ch),
+            KeyAction::InsertChar(ch) => self.insert_char_directly(ch, key_to_process),
         }
     }
 
     /// Insert a character directly into the buffer (for quick shortcuts like [ → ư)
-    fn insert_char_directly(&mut self, ch: char) -> ProcessResult {
-        self.buffer.push_simple(ch);
+    /// Tracks the original raw key so auto-restore works correctly.
+    fn insert_char_directly(&mut self, ch: char, raw_key: char) -> ProcessResult {
+        self.buffer.push(ch, raw_key);
         self.last_transform = LastTransform::default();
         let text = self.buffer.get_text();
         ProcessResult::update(text, self.buffer.len())
@@ -1081,10 +1082,9 @@ mod tests {
         assert_eq!(engine.get_buffer(), "v");
     }
 
-    // NOTE: The bracket shortcuts ([ → ư, ] → ơ) are defined in telex.rs
-    // but they don't work in engine because brackets are treated as word
-    // boundaries before reaching the input method. This is a known limitation.
-    // To use ư/ơ quickly, users should use uw/ow instead.
+    // Bracket shortcuts ([ → ư, ] → ơ) are handled via the word-boundary
+    // bypass in process_key, which probes the input method before treating
+    // a character as a word boundary.
 
     #[test]
     fn test_uppercase_handling() {
@@ -1553,5 +1553,129 @@ mod tests {
         assert_eq!(engine.get_buffer(), "tư");
         engine.process_key('w', false);
         assert_eq!(engine.get_buffer(), "tuw");
+    }
+
+    #[test]
+    fn test_uo_compound_with_tone() {
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        // thuowng → thương
+        for ch in "thuowng".chars() {
+            engine.process_key(ch, false);
+        }
+        assert_eq!(engine.get_buffer(), "thương");
+
+        // duowcj → được
+        engine.clear();
+        for ch in "duowcj".chars() {
+            engine.process_key(ch, false);
+        }
+        assert_eq!(engine.get_buffer(), "được");
+
+        // cuowngf → cường
+        engine.clear();
+        for ch in "cuowngf".chars() {
+            engine.process_key(ch, false);
+        }
+        assert_eq!(engine.get_buffer(), "cường");
+
+        // nguowif → người
+        engine.clear();
+        for ch in "nguowif".chars() {
+            engine.process_key(ch, false);
+        }
+        assert_eq!(engine.get_buffer(), "người");
+    }
+
+    #[test]
+    fn test_uppercase_modifier_sequences() {
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        // Uw → Ư
+        engine.process_key('U', false);
+        engine.process_key('w', false);
+        assert_eq!(engine.get_buffer(), "Ư");
+
+        // OW → Ơ
+        engine.clear();
+        engine.process_key('O', false);
+        engine.process_key('W', false);
+        assert_eq!(engine.get_buffer(), "Ơ");
+
+        // DD → Đ
+        engine.clear();
+        engine.process_key('D', false);
+        engine.process_key('d', false);
+        assert_eq!(engine.get_buffer(), "Đ");
+
+        // AW → Ă
+        engine.clear();
+        engine.process_key('A', false);
+        engine.process_key('w', false);
+        assert_eq!(engine.get_buffer(), "Ă");
+    }
+
+    #[test]
+    fn test_tone_position_iu_diphthong() {
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        // dịu: tone on 'i' (first vowel)
+        for ch in "diuj".chars() {
+            engine.process_key(ch, false);
+        }
+        assert_eq!(engine.get_buffer(), "dịu");
+
+        // líu: tone on 'i' (first vowel)
+        engine.clear();
+        for ch in "lius".chars() {
+            engine.process_key(ch, false);
+        }
+        assert_eq!(engine.get_buffer(), "líu");
+    }
+
+    #[test]
+    fn test_modern_traditional_tone_style() {
+        // Modern style (default): tone on second vowel for oa/oe/uy
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        // hoaf → hoà (modern: tone on 'a')
+        for ch in "hoaf".chars() {
+            engine.process_key(ch, false);
+        }
+        assert_eq!(engine.get_buffer(), "hoà");
+
+        // Traditional style: tone on first vowel for oa/oe/uy
+        engine.clear();
+        engine.set_modern_style(false);
+        for ch in "hoaf".chars() {
+            engine.process_key(ch, false);
+        }
+        assert_eq!(engine.get_buffer(), "hòa");
+    }
+
+    #[test]
+    fn test_bracket_shortcut_raw_tracking() {
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        // [ → ư, raw should be '['
+        engine.process_key('[', false);
+        assert_eq!(engine.get_buffer(), "ư");
+        assert_eq!(engine.get_raw_buffer(), "[");
+
+        // ] → ơ, raw should be ']'
+        engine.clear();
+        engine.process_key(']', false);
+        assert_eq!(engine.get_buffer(), "ơ");
+        assert_eq!(engine.get_raw_buffer(), "]");
     }
 }
