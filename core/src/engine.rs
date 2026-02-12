@@ -150,7 +150,7 @@ impl Engine {
             auto_capitalize: true,
             smart_quotes: false,
             spell_check: true,
-            modern_style: true, // Default to modern style
+            modern_style: true,    // Default to modern style
             next_char_upper: true, // Start with capital
             last_committed_char: None,
         }
@@ -254,6 +254,14 @@ impl Engine {
 
         // Check for word boundary - triggers auto-restore check
         if validation::is_word_boundary(key_to_process) {
+            // Check if input method handles this key as a direct character shortcut
+            // (e.g., [ → ư, ] → ơ in Telex). These bypass word boundary.
+            let prev_for_shortcut = self.buffer.last().map(|bc| bc.ch);
+            let shortcut_action = self.method.process(key_to_process, prev_for_shortcut);
+            if let KeyAction::InsertChar(ch) = shortcut_action {
+                return self.insert_char_directly(ch);
+            }
+
             // Special case: Allow specific symbols as shortcut prefix if buffer is empty
             if self.buffer.is_empty() && self.is_valid_prefix(key_to_process) {
                 self.shortcut_prefix = Some(key_to_process);
@@ -1479,5 +1487,71 @@ mod tests {
         // The second 'd' toggles the stroke off
         engine.process_key('d', false);
         assert_eq!(engine.get_buffer(), "d");
+    }
+
+    #[test]
+    fn test_bracket_shortcut_uw_ow() {
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        // [ → ư (standalone)
+        engine.process_key('[', false);
+        assert_eq!(engine.get_buffer(), "ư");
+
+        // ] → ơ (standalone)
+        engine.clear();
+        engine.process_key(']', false);
+        assert_eq!(engine.get_buffer(), "ơ");
+
+        // t + [ → tư (mid-word)
+        engine.clear();
+        engine.process_key('t', false);
+        engine.process_key('[', false);
+        assert_eq!(engine.get_buffer(), "tư");
+
+        // h + ] + i → hơi (mid-word with continuation)
+        engine.clear();
+        engine.process_key('h', false);
+        engine.process_key(']', false);
+        engine.process_key('i', false);
+        assert_eq!(engine.get_buffer(), "hơi");
+    }
+
+    #[test]
+    fn test_horn_undo_ww() {
+        let mut engine = Engine::new();
+        engine.set_options(false, false, false);
+        engine.set_method("telex");
+
+        // uw → ư, then w → uw (undo horn)
+        engine.process_key('u', false);
+        engine.process_key('w', false);
+        assert_eq!(engine.get_buffer(), "ư");
+        engine.process_key('w', false);
+        assert_eq!(engine.get_buffer(), "uw");
+
+        // ow → ơ, then w → ow (undo horn)
+        engine.clear();
+        engine.process_key('o', false);
+        engine.process_key('w', false);
+        assert_eq!(engine.get_buffer(), "ơ");
+        engine.process_key('w', false);
+        assert_eq!(engine.get_buffer(), "ow");
+
+        // standalone ww → ww (no transform)
+        engine.clear();
+        engine.process_key('w', false);
+        engine.process_key('w', false);
+        assert_eq!(engine.get_buffer(), "ww");
+
+        // tuww → tuw (undo horn in word context)
+        engine.clear();
+        engine.process_key('t', false);
+        engine.process_key('u', false);
+        engine.process_key('w', false);
+        assert_eq!(engine.get_buffer(), "tư");
+        engine.process_key('w', false);
+        assert_eq!(engine.get_buffer(), "tuw");
     }
 }
